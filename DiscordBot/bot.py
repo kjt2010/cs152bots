@@ -8,6 +8,8 @@ import re
 import requests
 from report import Report
 
+PERSPECTIVE_SCORE_THRESHOLD = 0.70
+
 # Set up logging to the console
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
@@ -56,10 +58,10 @@ class ModBot(discord.Client):
 
     async def on_message(self, message):
         '''
-        This function is called whenever a message is sent in a channel that the bot can see (including DMs). 
-        Currently the bot is configured to only handle messages that are sent over DMs or in your group's "group-#" channel. 
+        This function is called whenever a message is sent in a channel that the bot can see (including DMs).
+        Currently the bot is configured to only handle messages that are sent over DMs or in your group's "group-#" channel.
         '''
-        # Ignore messages from the bot 
+        # Ignore messages from the bot
         if message.author.id == self.user.id:
             return
 
@@ -122,7 +124,8 @@ class ModBot(discord.Client):
             'requestedAttributes': {
                                     'SEVERE_TOXICITY': {}, 'PROFANITY': {},
                                     'IDENTITY_ATTACK': {}, 'THREAT': {},
-                                    'TOXICITY': {}, 'FLIRTATION': {}
+                                    'TOXICITY': {}, 'INSULT': {}, 'INCOHERENT': {},
+                                    'SPAM': {}, 'LIKELY_TO_REJECT':{}
                                 },
             'doNotStore': True
         }
@@ -130,8 +133,23 @@ class ModBot(discord.Client):
         response_dict = response.json()
 
         scores = {}
-        for attr in response_dict["attributeScores"]:
-            scores[attr] = response_dict["attributeScores"][attr]["summaryScore"]["value"]
+        flagged_scores = {}
+        # TODO: Set to False
+        use_dummy = False
+        if use_dummy:
+            pass
+                # scores = {'SEVERE_TOXICITY': 4, 'PROFANITY': 5,
+                #     'IDENTITY_ATTACK': 6, 'THREAT': 7,
+                #     'TOXICITY': 8, 'FLIRTATION': 0, 'INCOHERENT'}
+        else:
+            for attr in response_dict["attributeScores"]:
+                score = response_dict["attributeScores"][attr]["summaryScore"]["value"]
+                scores[attr] = score
+                if score >= PERSPECTIVE_SCORE_THRESHOLD:
+                    flagged_scores[attr] = score
+
+        print("scores for `{}`".format(message.content), scores)
+        print("flagged scores for `{}`".format(message.content), flagged_scores)
 
         return scores
 
