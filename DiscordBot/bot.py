@@ -99,6 +99,18 @@ class ModBot(discord.Client):
         if self.reports[author_id].report_complete():
             self.reports.pop(author_id)
 
+    async def on_raw_reaction_add(self, payload):
+        if not str(self.mod_channels[payload.guild_id]) == 'group-14-mod':
+            print("reaction sent but not in mod channel")
+            return
+        if payload.emoji.name == "👍":
+            # TODO: delete message
+            guild = client.get_guild(payload.guild_id)
+            channel = guild.get_channel(payload.channel_id)
+            message = await channel.fetch_message(payload.message_id)
+            messageToDeleteId = message.content[message.content.rfind(':')+1:-3]
+            print("should delete messageId: ", messageToDeleteId)
+
     async def handle_channel_message(self, message):
         # Only handle messages sent in the "group-#" channel
         if not message.channel.name == f'group-{self.group_num}':
@@ -108,8 +120,15 @@ class ModBot(discord.Client):
         mod_channel = self.mod_channels[message.guild.id]
         await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"')
 
-        scores = self.eval_text(message)
-        await mod_channel.send(self.code_format(json.dumps(scores, indent=2)))
+        scores, flagged_scores = self.eval_text(message)
+        await mod_channel.send(self.code_format("Scores in all measured categories: " + json.dumps(scores, indent=2)))
+        if len(flagged_scores) > 0:
+            await mod_channel.send(self.code_format(
+                "We've flagged this message for you because it passed the acceptable threshold in these categories: "
+                + json.dumps(flagged_scores, indent=2)))
+            await mod_channel.send(self.code_format(
+                "Please react to this message with 👍 if you'd like us to delete the message '"
+                +message.content+"':"+str(message.id)))
 
     def eval_text(self, message):
         '''
@@ -151,7 +170,7 @@ class ModBot(discord.Client):
         print("scores for `{}`".format(message.content), scores)
         print("flagged scores for `{}`".format(message.content), flagged_scores)
 
-        return scores
+        return scores, flagged_scores
 
     def code_format(self, text):
         return "```" + text + "```"
