@@ -9,7 +9,7 @@ import requests
 from report import Report
 from uni2ascii import uni2ascii
 
-PERSPECTIVE_SCORE_THRESHOLD = 0.70
+PERSPECTIVE_SCORE_THRESHOLD = 0.80
 
 # Set up logging to the console
 logger = logging.getLogger('discord')
@@ -37,6 +37,7 @@ class ModBot(discord.Client):
         self.mod_channels = {} # Map from guild to the mod channel id for that guild
         self.reports = {} # Map from user IDs to the state of their report
         self.perspective_key = key
+        self.deleteMap = {}
 
     async def on_ready(self):
         print(f'{self.user.name} has connected to Discord! It is these guilds:')
@@ -77,6 +78,9 @@ class ModBot(discord.Client):
 
         # handle adversarial attempts at hiding text via unicode
         message.content = uni2ascii(message.content)
+
+        # Create a map of messageId -> message.delete() function to use if moderator reacts to bot
+        self.deleteMap[str(message.id)] = message.delete
 
         # Check if this message was sent in a server ("guild") or if it's a DM
         if message.guild:
@@ -122,7 +126,8 @@ class ModBot(discord.Client):
             channel = guild.get_channel(payload.channel_id)
             message = await channel.fetch_message(payload.message_id)
             messageToDeleteId = message.content[message.content.rfind(':')+1:-3]
-            print("should delete messageId: ", messageToDeleteId)
+            print("Deleting message: ", messageToDeleteId)
+            await self.deleteMap[str(messageToDeleteId)]()
 
     async def handle_channel_message(self, message):
         # Only handle messages sent in the "group-#" channel
