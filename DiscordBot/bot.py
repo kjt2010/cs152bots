@@ -7,6 +7,7 @@ import logging
 import re
 import requests
 from report import Report
+from uni2ascii import uni2ascii
 
 PERSPECTIVE_SCORE_THRESHOLD = 0.70
 
@@ -56,6 +57,15 @@ class ModBot(discord.Client):
                 if channel.name == f'group-{self.group_num}-mod':
                     self.mod_channels[guild.id] = channel
 
+    async def on_raw_message_edit(self, payload):
+        guild = client.get_guild(payload.guild_id)
+        channel = guild.get_channel(payload.channel_id)
+        message = await channel.fetch_message(payload.message_id)
+        # handle adversarial attempts at hiding text via unicode
+        message.content = uni2ascii(message.content)
+        # treat all edited messages as new messages
+        await self.on_message(message)
+
     async def on_message(self, message):
         '''
         This function is called whenever a message is sent in a channel that the bot can see (including DMs).
@@ -64,6 +74,9 @@ class ModBot(discord.Client):
         # Ignore messages from the bot
         if message.author.id == self.user.id:
             return
+
+        # handle adversarial attempts at hiding text via unicode
+        message.content = uni2ascii(message.content)
 
         # Check if this message was sent in a server ("guild") or if it's a DM
         if message.guild:
