@@ -2,11 +2,20 @@ from enum import Enum, auto
 import discord
 import re
 
+# USER REPORTING FLOW
+
 class State(Enum):
     REPORT_START = auto()
     AWAITING_MESSAGE = auto()
     MESSAGE_IDENTIFIED = auto()
     REPORT_COMPLETE = auto()
+    VIOLENCE = auto()
+    SPAM = auto()
+    HATE = auto()
+    FALSE_INFO = auto()
+    HARASSMENT = auto()
+    SOCK_PUPPET = auto()
+    BLOCK_USER = auto()
 
 class Report:
     START_KEYWORD = "report"
@@ -17,6 +26,14 @@ class Report:
         self.state = State.REPORT_START
         self.client = client
         self.message = None
+
+    async def generate_message_to_mods(self, reason_message, reason):
+        mod_channel = self.client.mod_channels[self.message.guild.id]
+        await mod_channel.send(f"""```Forwarded message:\n{self.message.author.name}: "{self.message.content}```".
+Message was flagged by user {reason_message.author.name} for {reason}.""")
+
+
+
 
     async def handle_message(self, message):
         '''
@@ -56,12 +73,124 @@ class Report:
             # Here we've found the message - it's up to you to decide what to do next!
             self.state = State.MESSAGE_IDENTIFIED
             # TODO: Prompt for more information
+            self.message = message
             return ["I found this message:", "```" + message.author.name + ": " + message.content + "```", \
-                    "This is all I know how to do right now - it's up to you to build out the rest of my reporting flow!"]
+                    "Please select a problem with this message by typing the number next to the appropriate reason:", \
+                    "1: Violence or danger", "2: Spam", "3: Hate speech or symbols", "4: False information", "5: Harrassment"]
+
 
         if self.state == State.MESSAGE_IDENTIFIED:
             # TODO: Do whatever response needed
-            return ["<insert rest of reporting flow here>"]
+            if message.content == "1":
+                self.state = State.VIOLENCE
+                return ["Who is the threat towards?", "1: You", "2: Someone else"]
+            elif message.content == "2":
+                self.state = State.SPAM
+                return ["How is this message spam?", "1: The user is fake", "2: Includes a link to a potentially harmful, malicious, or phishing site", "It's something else"]
+            elif message.content == "3":
+                self.state = State.HATE
+                return ["What kind of hate speech is this?", "1: Race or ethnicity", "2: Sex, gender, or sexual orientation", "3: Religion", "4: National origin", "5: Disability or disease"]
+            elif message.content == "4":
+                self.state = State.FALSE_INFO
+                return ["What's this message misleading about?", "1: Politics", "2: Health", "3: Something else"]
+            elif message.content == "5":
+                self.state = State.HARASSMENT
+                return ["How is this message harrassment?", "1: Degrading or shaming someone", "2: Repeatedly contacting a person or group that doesn't want contact", "3: Calling for the harm of someone"]
+            else:
+                return ["I'm sorry, that's not one of the choices. Please try again or say `cancel` to cancel."]
+        if self.state == State.VIOLENCE:
+            choice_to_text = {"1": "You", "2": "Someone else"}
+            if message.content not in choice_to_text:
+                return ["I'm sorry, that's not one of the choices. Please try again or say `cancel` to cancel."]
+            else:
+                await self.generate_message_to_mods(message, f'violence or danger towards {choice_to_text[message.content]}')
+                self.state = State.BLOCK_USER
+                return [
+                    "Thanks for letting us know. We'll use this information to alert our content moderation team and improve our processes. The message will be reviewed, and the user and/or message will be removed if appropriate.",
+                    "Would you also like to block or mute this user?",
+                    "1: Block, 2: Mute, 3: None"
+                ]
+        if self.state == State.SPAM:
+            choice_to_text = {
+                "1": "The user is fake",
+                "2": "Includes a link to a potentially harmful, malicious, or phishing site",
+                "3": "It's something else",
+            }
+            if message.content not in choice_to_text:
+                return ["I'm sorry, that's not one of the choices. Please try again or say `cancel` to cancel."]
+            else:
+                await self.generate_message_to_mods(message, f'spam: {choice_to_text[message.content]}')
+                self.state = State.BLOCK_USER
+                return [
+                    "Thanks for letting us know. We'll use this information to alert our content moderation team and improve our processes. The message will be reviewed, and the user and/or message will be removed if appropriate.",
+                    "Would you also like to block or mute this user?",
+                    "1: Block, 2: Mute, 3: None"
+                ]
+        if self.state == State.HATE:
+            choice_to_text = {
+                "1": "Race or ethnicity",
+                "2": "Sex, gender, or sexual orientation",
+                "3": "Religion",
+                "4": "National origin",
+                "5": "Disability or disease",
+            }
+            if message.content not in choice_to_text:
+                return ["I'm sorry, that's not one of the choices. Please try again or say `cancel` to cancel."]
+            else:
+                await self.generate_message_to_mods(message, f'Hate speech or symbols relating to {choice_to_text[message.content]}')
+                self.state = State.BLOCK_USER
+                return [
+                    "Thanks for letting us know. We'll use this information to alert our content moderation team and improve our processes. The message will be reviewed, and the user and/or message will be removed if appropriate.",
+                    "Would you also like to block or mute this user?",
+                    "1: Block, 2: Mute, 3: None"
+                ]
+        if self.state == State.FALSE_INFO:
+            choice_to_text = {
+                "1": "Politics",
+                "2": "Health",
+                "3": "Something else",
+            }
+            if message.content not in choice_to_text:
+                return ["I'm sorry, that's not one of the choices. Please try again or say `cancel` to cancel."]
+            else:
+                await self.generate_message_to_mods(message, f'False information about {choice_to_text[message.content]}')
+                self.state = State.SOCK_PUPPET
+                return ["Do you suspect that this account is a bot or sock puppet user?", "1: yes", "2: no"]
+
+        if self.state == State.HARASSMENT:
+            choice_to_text = {
+                "1": "Degrading or shaming someone",
+                "2": "Repeatedly contacting a person or group that doesn't want contact",
+                "3": "Calling for the harm of someone",
+            }
+            if message.content not in choice_to_text:
+                return ["I'm sorry, that's not one of the choices. Please try again or say `cancel` to cancel."]
+            else:
+                await self.generate_message_to_mods(message, f'harrassment: {choice_to_text[message.content]}')
+                self.state = State.SOCK_PUPPET
+                return ["Do you suspect that this account is a bot or sock puppet user?", "1: yes", "2: no"]
+        if self.state == State.SOCK_PUPPET:
+            if message.content not in ["1", "2"]:
+                return ["I'm sorry, that's not one of the choices. Please try again or say `cancel` to cancel."]
+            else:
+                mod_channel = self.client.mod_channels[self.message.guild.id]
+                await mod_channel.send(f"{self.message.author} was also flagged as a possible bot or sock puppet account")
+                self.state = State.BLOCK_USER
+                return [
+                    "Thanks for letting us know. We'll use this information to alert our content moderation team and improve our processes. The message will be reviewed, and the user and/or message will be removed if appropriate.",
+                    "Would you also like to block or mute this user?",
+                    "1: Block, 2: Mute, 3: None"
+                ]
+        if self.state == State.BLOCK_USER:
+            if message.content not in ["1", "2", "3"]:
+                return ["I'm sorry, that's not one of the choices. Please try again or say `cancel` to cancel."]
+            else:
+                if message.content == "1":
+                    return [f"You blocked user {message.author.name}."]
+                elif message.content == "2":
+                    return [f"You muted user {message.author.name}."]
+                self.state = State.REPORT_COMPLETE
+
 
         return []
 

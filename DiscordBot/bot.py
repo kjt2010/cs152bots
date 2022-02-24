@@ -9,6 +9,7 @@ import requests
 from report import Report
 
 PERSPECTIVE_SCORE_THRESHOLD = 0.70
+AUTOMATICE_REMOVAL_SCORE_THRESHOLD = 0.95
 
 # Set up logging to the console
 logger = logging.getLogger('discord')
@@ -110,6 +111,14 @@ class ModBot(discord.Client):
             message = await channel.fetch_message(payload.message_id)
             messageToDeleteId = message.content[message.content.rfind(':')+1:-3]
             print("should delete messageId: ", messageToDeleteId)
+        if payload.emoji.name == "<SUSPEND USER EMOJI>":
+            guild = client.get_guild(payload.guild_id)
+            channel = guild.get_channel(payload.channel_id)
+            message = await channel.fetch_message(payload.message_id)
+            messageToDeleteId = message.content[message.content.rfind(':')+1:-3]
+
+            print("should delete userID: ", messageToDeleteId)
+
 
     async def handle_channel_message(self, message):
         # Only handle messages sent in the "group-#" channel
@@ -129,7 +138,9 @@ class ModBot(discord.Client):
             await mod_channel.send(self.code_format(
                 "Please react to this message with 👍 if you'd like us to delete the message '"
                 +message.content+"':"+str(message.id)))
-
+            await mod_channel.send(self.code_format(
+                "Please react to this message with <SUSPEND USER EMOJI> if you'd like us to suspend the user who sent the message.'"
+                +message.content+"':"+str(message.id)))
     def eval_text(self, message):
         '''
         Given a message, forwards the message to Perspective and returns a dictionary of scores.
