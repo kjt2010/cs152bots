@@ -73,8 +73,8 @@ class ModBot(discord.Client):
         This function is called whenever a message is sent in a channel that the bot can see (including DMs).
         Currently the bot is configured to only handle messages that are sent over DMs or in your group's "group-#" channel.
         '''
-        # Ignore messages from the bot
-        if message.author.id == self.user.id:
+        # Ignore messages from the bot unless it's a forwarded message
+        if message.author.id == self.user.id and not message.content.startswith("User-reported message"):
             return
 
         # handle adversarial attempts at hiding text via unicode
@@ -126,38 +126,101 @@ class ModBot(discord.Client):
             guild = client.get_guild(payload.guild_id)
             channel = guild.get_channel(payload.channel_id)
             message = await channel.fetch_message(payload.message_id)
-            messageToDeleteId = message.content[message.content.rfind(':')+1:-3]
+            messageToDeleteId = message.content[message.content.rfind(':')+1:]
             print("Deleting message: ", messageToDeleteId)
             await self.deleteMap[str(messageToDeleteId)]()
-        if payload.emoji.name == "<SUSPEND USER EMOJI>":
+        if payload.emoji.name == "❌":
             guild = client.get_guild(payload.guild_id)
             channel = guild.get_channel(payload.channel_id)
             message = await channel.fetch_message(payload.message_id)
-            messageToDeleteId = message.content[message.content.rfind(':')+1:-3]
+            userToSuspend = message.content[message.content.rfind(':')+1:]
 
-            print("should delete userID: ", messageToDeleteId)
+
+            print("should suspend userID: ", userToSuspend)
+            channel = self.mod_channels[payload.guild_id]
+            await channel.send(f"User {userToSuspend} has been suspended.")
+        if payload.emoji.name == "🗑️":
+            guild = client.get_guild(payload.guild_id)
+            channel = guild.get_channel(payload.channel_id)
+            message = await channel.fetch_message(payload.message_id)
+            userToSuspend = message.content[message.content.rfind(':')+1:]
+            print("should suspend userID: ", userToSuspend)
+            channel = self.mod_channels[payload.guild_id]
+            await channel.send(f"User {userToSuspend} has been deleted.")
 
     async def handle_channel_message(self, message):
         # Only handle messages sent in the "group-#" channel
+        mod_channel = self.mod_channels[message.guild.id]
+        print("got message", message)
+        if message.channel == mod_channel and message.content.startswith("User-reported message"):
+            user_id_start = message.content.rfind("Reported message sender id: ") + len("Reported message sender id: ")
+            user_id = message.content[user_id_start: user_id_start + 18]
+            message_id_start = message.content.rfind("Reported message id: ") + len("Reported message id: ")
+            message_id = message.content[message_id_start: message_id_start + 18]
+            delete_message_string_suffix = f"please react to this message with 👍 to delete the message: {message_id}"
+            suspend_user_string_suffix = f"please react to this message with ❌ to suspend the user's account: {user_id}"
+            remove_user_string_suffix = f"please react to this message with 🗑️ to suspend the user's account: {user_id}"
+
+
+
+            topic = message.content[message.content.rfind("for") + 4:]
+            topic_end = topic.find("\n")
+            topic = topic[:topic_end]
+            print("topic in mod", topic)
+            print('user_id', user_id)
+            print('message_id', message_id)
+            if topic.startswith('"violence'):
+                await mod_channel.send(f"If the reported message glorifies violence, " + delete_message_string_suffix)
+                await mod_channel.send("If the reported message threatens violence against an individual or a group of people, " + suspend_user_string_suffix)
+
+            elif topic.startswith('"spam: Includes a link'):
+                await mod_channel.send("If the reported message deceptively or misleadingly directs users to a harmful site, " + delete_message_string_suffix)
+            elif topic.startswith('"spam: The user is fake'):
+                await mod_channel.send("If the reported message's sender impersonates individuals or groups and intends to deceive others, " + remove_user_string_suffix)
+
+            elif topic.startswith('"hate'):
+                await mod_channel.send("If the reported message promotes violence against, threatens, harasses, or promotes terrorism or violent extremism other people on the basis of race, ethnicity, sexual orientation, gender, religion, national origin, disability, or disease, " + suspend_user_string_suffix)
+
+            elif topic.startswith('"False information about Politics'):
+                await mod_channel.send("If the reported message is manipulating or interfering in elections or other civic processes (This includes posting or sharing content that may suppress participation or mislead people about when, where, or how to participate in a civic process 's sender impersonates individuals or groups and intends to deceive others), " + delete_message_string_suffix)
+                await mod_channel.send("If you suspect that this account is a bot or a sock puppet user, " + remove_user_string_suffix)
+
+            elif topic.startswith('"False information'):
+                await mod_channel.send("If the reported message is likely to cause harm, "+ delete_message_string_suffix)
+                await mod_channel.send("If you suspect that this account is a bot or a sock puppet user, " + remove_user_string_suffix)
+            elif topic.startswith('"harrassment'):
+                if topic.startswith('"harrassment: Degrading'):
+                    await mod_channel.send("If the reported message targets a individual or group by with dehumanizing statements, calls for segregation or exclusion, or statements of inferiority, " + suspend_user_string_suffix)
+                elif topic.startswith('"harrassment: Repeatedly'):
+                    await mod_channel.send("If there a pattern of actions or previous reports by the reporter, " + suspend_user_string_suffix)
+                elif topic.startswith('"harrassment: Encourages'):
+                    await mod_channel.send("If the reported message includes the targeted harassment of someone, or incites other people to do so (this includes wishing or hoping that someone experiences physical harm), " + suspend_user_string_suffix)
+                await mod_channel.send("If you suspect that this account is a bot or a sock puppet user, " + remove_user_string_suffix)
+
+
+
+
+            print("GOT MOD")
+
         if not message.channel.name == f'group-{self.group_num}':
             return
 
         # Forward the message to the mod channel
-        mod_channel = self.mod_channels[message.guild.id]
-        await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"')
+        # await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"')
 
         scores, flagged_scores = self.eval_text(message)
-        await mod_channel.send(self.code_format("Scores in all measured categories: " + json.dumps(scores, indent=2)))
+        # await mod_channel.send(self.code_format("Scores in all measured categories: " + json.dumps(scores, indent=2)))
         if len(flagged_scores) > 0:
-            await mod_channel.send(self.code_format(
+            await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"')
+            await mod_channel.send(
                 "We've flagged this message for you because it passed the acceptable threshold in these categories: "
-                + json.dumps(flagged_scores, indent=2)))
-            await mod_channel.send(self.code_format(
+                + self.code_format(json.dumps(flagged_scores, indent=2)))
+            await mod_channel.send(
                 "Please react to this message with 👍 if you'd like us to delete the message '"
-                +message.content+"':"+str(message.id)))
-            await mod_channel.send(self.code_format(
-                "Please react to this message with <SUSPEND USER EMOJI> if you'd like us to suspend the user who sent the message.'"
-                +message.content+"':"+str(message.id)))
+                +message.content+"':"+str(message.id))
+            await mod_channel.send(
+                "Please react to this message with ❌ if you'd like us to suspend the user who sent the message.'"
+                +message.content+"':"+str(message.author.id))
     def eval_text(self, message):
         '''
         Given a message, forwards the message to Perspective and returns a dictionary of scores.

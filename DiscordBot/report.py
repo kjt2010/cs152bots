@@ -29,8 +29,10 @@ class Report:
 
     async def generate_message_to_mods(self, reason_message, reason):
         mod_channel = self.client.mod_channels[self.message.guild.id]
-        await mod_channel.send(f"""```Forwarded message:\n{self.message.author.name}: "{self.message.content}```".
-Message was flagged by user {reason_message.author.name} for {reason}.""")
+        await mod_channel.send(f"""User-reported message:\n```{self.message.author.name}: "{self.message.content}```
+Message was flagged by user {reason_message.author.name} for "{reason}".
+Reported message sender id: {self.message.author.id}
+Reported message id: {self.message.id}""")
 
 
 
@@ -86,7 +88,7 @@ Message was flagged by user {reason_message.author.name} for {reason}.""")
                 return ["Who is the threat towards?", "1: You", "2: Someone else"]
             elif message.content == "2":
                 self.state = State.SPAM
-                return ["How is this message spam?", "1: The user is fake", "2: Includes a link to a potentially harmful, malicious, or phishing site", "It's something else"]
+                return ["How is this message spam?", "1: The user is fake", "2: Includes a link to a potentially harmful, malicious, or phishing site", "3: It's something else"]
             elif message.content == "3":
                 self.state = State.HATE
                 return ["What kind of hate speech is this?", "1: Race or ethnicity", "2: Sex, gender, or sexual orientation", "3: Religion", "4: National origin", "5: Disability or disease"]
@@ -161,7 +163,7 @@ Message was flagged by user {reason_message.author.name} for {reason}.""")
             choice_to_text = {
                 "1": "Degrading or shaming someone",
                 "2": "Repeatedly contacting a person or group that doesn't want contact",
-                "3": "Calling for the harm of someone",
+                "3": "Encourages the harm of someone",
             }
             if message.content not in choice_to_text:
                 return ["I'm sorry, that's not one of the choices. Please try again or say `cancel` to cancel."]
