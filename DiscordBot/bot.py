@@ -173,11 +173,11 @@ class ModBot(discord.Client):
             elif topic.startswith('"hate'):
                 await mod_channel.send("If the reported message promotes violence against, threatens, harasses, or promotes terrorism or violent extremism other people on the basis of race, ethnicity, sexual orientation, gender, religion, national origin, disability, or disease, " + suspend_user_string_suffix)
 
-            elif topic.startswith('"False information about Politics'):
+            elif topic.startswith('"false information about Politics'):
                 await mod_channel.send("If the reported message is manipulating or interfering in elections or other civic processes (This includes posting or sharing content that may suppress participation or mislead people about when, where, or how to participate in a civic process 's sender impersonates individuals or groups and intends to deceive others), " + delete_message_string_suffix)
                 await mod_channel.send("If you suspect that this account is a bot or a sock puppet user, " + remove_user_string_suffix)
 
-            elif topic.startswith('"False information'):
+            elif topic.startswith('"false information'):
                 await mod_channel.send("If the reported message is likely to cause harm, "+ delete_message_string_suffix)
                 await mod_channel.send("If you suspect that this account is a bot or a sock puppet user, " + remove_user_string_suffix)
             elif topic.startswith('"harrassment'):
