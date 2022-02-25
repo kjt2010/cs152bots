@@ -155,7 +155,7 @@ Reported message id: {self.message.id}""")
             if message.content not in choice_to_text:
                 return ["I'm sorry, that's not one of the choices. Please try again or say `cancel` to cancel."]
             else:
-                await self.generate_message_to_mods(message, f'false information about {choice_to_text[message.content]}')
+                await self.generate_message_to_mods(message, f'false info about {choice_to_text[message.content]}')
                 self.state = State.SOCK_PUPPET
                 return ["Do you suspect that this account is a bot or sock puppet user?", "1: yes", "2: no"]
 
