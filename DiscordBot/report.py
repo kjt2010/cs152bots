@@ -175,8 +175,9 @@ Reported message id: {self.message.id}""")
             if message.content not in ["1", "2"]:
                 return ["I'm sorry, that's not one of the choices. Please try again or say `cancel` to cancel."]
             else:
-                mod_channel = self.client.mod_channels[self.message.guild.id]
-                await mod_channel.send(f"{self.message.author} was also flagged as a possible bot or sock puppet account")
+                if message.content == "1":
+                    mod_channel = self.client.mod_channels[self.message.guild.id]
+                    await mod_channel.send(f"{self.message.author} was also flagged as a possible bot or sock puppet account")
                 self.state = State.BLOCK_USER
                 return [
                     "Thanks for letting us know. We'll use this information to alert our content moderation team and improve our processes. The message will be reviewed, and the user and/or message will be removed if appropriate.",
@@ -188,8 +189,10 @@ Reported message id: {self.message.id}""")
                 return ["I'm sorry, that's not one of the choices. Please try again or say `cancel` to cancel."]
             else:
                 if message.content == "1":
+                    self.state = State.REPORT_COMPLETE
                     return [f"You blocked user {self.message.author.name}."]
                 elif message.content == "2":
+                    self.state = State.REPORT_COMPLETE
                     return [f"You muted user {self.message.author.name}."]
                 self.state = State.REPORT_COMPLETE
 

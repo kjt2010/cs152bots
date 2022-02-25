@@ -147,7 +147,6 @@ class ModBot(discord.Client):
     async def handle_channel_message(self, message):
         # Only handle messages sent in the "group-#" channel
         mod_channel = self.mod_channels[message.guild.id]
-        print("got message", message)
         if message.channel == mod_channel and message.content.startswith("User-reported message"):
             user_id_start = message.content.rfind("Reported message sender id: ") + len("Reported message sender id: ")
             user_id = message.content[user_id_start: user_id_start + 18]
@@ -226,7 +225,7 @@ class ModBot(discord.Client):
                                     'SEVERE_TOXICITY': {}, 'PROFANITY': {},
                                     'IDENTITY_ATTACK': {}, 'THREAT': {},
                                     'TOXICITY': {}, 'INSULT': {}, 'INCOHERENT': {},
-                                    'SPAM': {}, 'LIKELY_TO_REJECT':{}
+                                    'SPAM': {},
                                 },
             'doNotStore': True
         }
