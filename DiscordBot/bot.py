@@ -134,9 +134,6 @@ class ModBot(discord.Client):
             channel = guild.get_channel(payload.channel_id)
             message = await channel.fetch_message(payload.message_id)
             userToSuspend = message.content[message.content.rfind(':')+1:]
-
-
-            print("should suspend userID: ", userToSuspend)
             channel = self.mod_channels[payload.guild_id]
             await channel.send(f"User {userToSuspend} has been suspended.")
         if payload.emoji.name == "🗑️":
@@ -144,7 +141,6 @@ class ModBot(discord.Client):
             channel = guild.get_channel(payload.channel_id)
             message = await channel.fetch_message(payload.message_id)
             userToSuspend = message.content[message.content.rfind(':')+1:]
-            print("should suspend userID: ", userToSuspend)
             channel = self.mod_channels[payload.guild_id]
             await channel.send(f"User {userToSuspend} has been deleted.")
 
@@ -159,16 +155,13 @@ class ModBot(discord.Client):
             message_id = message.content[message_id_start: message_id_start + 18]
             delete_message_string_suffix = f"please react to this message with 👍 to delete the message: {message_id}"
             suspend_user_string_suffix = f"please react to this message with ❌ to suspend the user's account: {user_id}"
-            remove_user_string_suffix = f"please react to this message with 🗑️ to suspend the user's account: {user_id}"
+            remove_user_string_suffix = f"please react to this message with 🗑️ to remove the user's account: {user_id}"
 
 
 
             topic = message.content[message.content.rfind("for") + 4:]
             topic_end = topic.find("\n")
             topic = topic[:topic_end]
-            print("topic in mod", topic)
-            print('user_id', user_id)
-            print('message_id', message_id)
             if topic.startswith('"violence'):
                 await mod_channel.send(f"If the reported message glorifies violence, " + delete_message_string_suffix)
                 await mod_channel.send("If the reported message threatens violence against an individual or a group of people, " + suspend_user_string_suffix)
@@ -199,8 +192,6 @@ class ModBot(discord.Client):
 
 
 
-
-            print("GOT MOD")
 
         if not message.channel.name == f'group-{self.group_num}':
             return

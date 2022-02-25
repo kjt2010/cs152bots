@@ -188,9 +188,9 @@ Reported message id: {self.message.id}""")
                 return ["I'm sorry, that's not one of the choices. Please try again or say `cancel` to cancel."]
             else:
                 if message.content == "1":
-                    return [f"You blocked user {message.author.name}."]
+                    return [f"You blocked user {self.message.author.name}."]
                 elif message.content == "2":
-                    return [f"You muted user {message.author.name}."]
+                    return [f"You muted user {self.message.author.name}."]
                 self.state = State.REPORT_COMPLETE
 
 
