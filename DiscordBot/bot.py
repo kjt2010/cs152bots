@@ -81,7 +81,8 @@ class ModBot(discord.Client):
         message.content = uni2ascii(message.content)
 
         # Create a map of messageId -> message.delete() function to use if moderator reacts to bot
-        self.deleteMap[str(message.id)] = message.delete
+        # self.deleteMap[str(message.id)] = message.delete
+        self.deleteMap[str(message.id)] = message.add_reaction
 
         # Check if this message was sent in a server ("guild") or if it's a DM
         if message.guild:
@@ -118,28 +119,22 @@ class ModBot(discord.Client):
             self.reports.pop(author_id)
 
     async def on_raw_reaction_add(self, payload):
-        if not str(self.mod_channels[payload.guild_id]) == 'group-14-mod':
-            print("reaction sent but not in mod channel")
+        guild = client.get_guild(payload.guild_id)
+        channel = guild.get_channel(payload.channel_id)
+        message = await channel.fetch_message(payload.message_id)
+        if str(channel) != 'group-14-mod':
+            # reaction sent but not in mod channel
             return
         if payload.emoji.name == "👍":
             # TODO: delete message
-            guild = client.get_guild(payload.guild_id)
-            channel = guild.get_channel(payload.channel_id)
-            message = await channel.fetch_message(payload.message_id)
             messageToDeleteId = message.content[message.content.rfind(':')+1:]
             print("Deleting message: ", messageToDeleteId)
-            await self.deleteMap[str(messageToDeleteId)]()
+            await self.deleteMap[str(messageToDeleteId)]("🗑️")
         if payload.emoji.name == "❌":
-            guild = client.get_guild(payload.guild_id)
-            channel = guild.get_channel(payload.channel_id)
-            message = await channel.fetch_message(payload.message_id)
             userToSuspend = message.content[message.content.rfind(':')+1:]
             channel = self.mod_channels[payload.guild_id]
             await channel.send(f"User {userToSuspend} has been suspended.")
         if payload.emoji.name == "🗑️":
-            guild = client.get_guild(payload.guild_id)
-            channel = guild.get_channel(payload.channel_id)
-            message = await channel.fetch_message(payload.message_id)
             userToSuspend = message.content[message.content.rfind(':')+1:]
             channel = self.mod_channels[payload.guild_id]
             await channel.send(f"User {userToSuspend} has been deleted.")
