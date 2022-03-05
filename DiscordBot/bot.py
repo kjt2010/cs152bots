@@ -8,6 +8,13 @@ import re
 import requests
 from report import Report
 from uni2ascii import uni2ascii
+import time
+import asyncio
+import csv
+import pandas as pd
+from datetime import datetime, timedelta
+from matplotlib import pyplot as plt
+from matplotlib import dates as mpl_dates
 
 PERSPECTIVE_SCORE_THRESHOLD = 0.80
 AUTOMATICE_REMOVAL_SCORE_THRESHOLD = 0.95
@@ -118,6 +125,24 @@ class ModBot(discord.Client):
         if self.reports[author_id].report_complete():
             self.reports.pop(author_id)
 
+    # TODO: Kyle: fix up this code so it correctly generates a network
+    def gen_networkPlot():
+        with open("./time_data.csv") as f:
+            data = [line.split(',') for line in f]
+            #Source: https://towardsdatascience.com/social-network-analysis-from-theory-to-applications-with-python-d12e9a34c2c7
+            plot_dataMelted = data.melt( #melt to edgelist
+                ['message_id','message_content','message_timestamp','count'],
+                var_name = 'message_author', value_name = 'count'
+            )
+            G = nx.from_pandas_edgelist(plot_dataMelted, #Create a directed graph
+                                        source = 'message_author',
+                                        target = 'message_mentions',
+                                        edge_attr = 'count',
+                                        create_using = nx.Digraph()
+            )
+            # save the network below as networkPlot.png so it can be sent
+            nx.draw_networkx(G) #Visualize network
+
     async def on_raw_reaction_add(self, payload):
         guild = client.get_guild(payload.guild_id)
         channel = guild.get_channel(payload.channel_id)
@@ -126,10 +151,34 @@ class ModBot(discord.Client):
             # reaction sent but not in mod channel
             return
         if payload.emoji.name == "👍":
-            # TODO: delete message
             messageToDeleteId = message.content[message.content.rfind(':')+1:]
             print("Deleting message: ", messageToDeleteId)
             await self.deleteMap[str(messageToDeleteId)]("🗑️")
+        if payload.emoji.name == "✅":
+            authorToGraph = message.content[message.content.rfind('(')+1:message.content.rfind(')')]
+            print("graphing author:", authorToGraph)
+
+            #graphing time series data:
+            # header = message_id,message_author,message_content,message_timestamp,message_mentions,count
+            with open("./time_data.csv") as f:
+                data = [line.split(',') for line in f]
+                for row in data:
+                    if str(row[1]) == str(authorToGraph):
+                        message_id, message_author, message_content, message_timestamp, message_mentions, count = row
+                        time = datetime.strptime(message_timestamp[:-7], '%Y-%m-%d %H:%M:%S') #cutting out the milliseconds
+                        plt.plot_date(time, count)
+            plt.gcf().autofmt_xdate()
+            date_format = mpl_dates.DateFormatter('%D %H:%M:%S')
+            plt.gca().xaxis.set_major_formatter(date_format)
+            plt.title("User "+ str(authorToGraph)+"'s messages over time")
+            # save the plot as timePlot.png which can be accessed via discord.File('timePlot.png')
+            plt.savefig(fname='timePlot')
+            await channel.send(file=discord.File('timePlot.png'))
+
+            # TODO: Kyle, I wrote some psuedocode below to send the graph once it's being generated properly
+            # gen_networkPlot()
+            # await channel.send(file=discord.File('networkPlot.png'))
+
         if payload.emoji.name == "❌":
             userToSuspend = message.content[message.content.rfind(':')+1:]
             channel = self.mod_channels[payload.guild_id]
@@ -141,6 +190,15 @@ class ModBot(discord.Client):
 
     async def handle_channel_message(self, message):
         # Only handle messages sent in the "group-#" channel
+
+        # record message in csv file
+        f = open('./time_data.csv', 'a+', newline='')
+        writer = csv.writer(f)
+        # header = message_id,message_author,message_content,message_timestamp,message_mentions,count
+        row = [message.id, message.author.id, message.content, message.created_at, [m.id for m in message.mentions], 1]
+        writer.writerow(row)
+        f.close()
+
         mod_channel = self.mod_channels[message.guild.id]
         if message.channel == mod_channel and message.content.startswith("User-reported message"):
             user_id_start = message.content.rfind("Reported message sender id: ") + len("Reported message sender id: ")
@@ -208,6 +266,9 @@ class ModBot(discord.Client):
             await mod_channel.send(
                 "Please react to this message with ❌ if you'd like us to suspend the user who sent the message.'"
                 +message.content+"':"+str(message.author.id))
+            await mod_channel.send(
+                "Do you want to generate a graphical analysis of the author's ("+str(message.author.id)+") messaging? If yes, please react to this message with ✅."
+            )
     def eval_text(self, message):
         '''
         Given a message, forwards the message to Perspective and returns a dictionary of scores.
