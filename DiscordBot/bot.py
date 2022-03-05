@@ -140,7 +140,7 @@ class ModBot(discord.Client):
                                         edge_attr = 'count',
                                         create_using = nx.Digraph()
             )
-            # save the network below as networkPlot.png so it can be sent
+            plt.savefig(fname='networkPlot')
             nx.draw_networkx(G) #Visualize network
 
     async def on_raw_reaction_add(self, payload):
@@ -176,9 +176,9 @@ class ModBot(discord.Client):
             await channel.send(file=discord.File('timePlot.png'))
 
             # TODO: Kyle, I wrote some psuedocode below to send the graph once it's being generated properly
-            # gen_networkPlot()
-            # await channel.send(file=discord.File('networkPlot.png'))
-
+            gen_networkPlot()
+            await channel.send(file=discord.File('networkPlot.png'))
+           
         if payload.emoji.name == "❌":
             userToSuspend = message.content[message.content.rfind(':')+1:]
             channel = self.mod_channels[payload.guild_id]
