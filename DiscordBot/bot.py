@@ -150,12 +150,12 @@ class ModBot(discord.Client):
             authorToGraph = message.content[message.content.rfind('(')+1:message.content.rfind(')')]
             user = await client.fetch_user(int(authorToGraph))
             #graphing time series data:
-            # header = message_id,message_author,message_content,message_timestamp,message_mentions,count
+            # header = message_id,message_author_id, message_author_name,message_content,message_timestamp,message_mentions,count
             with open("./time_data.csv") as f:
-                data = [line.split(',') for line in f]
+                data = [line.split('\t') for line in f]
                 for row in data:
-                    if str(row[1]) == str(authorToGraph):
-                        message_id, message_author, message_content, message_timestamp, message_mentions, count = row
+                    if len(row)>1 and str(row[1]) == str(authorToGraph):
+                        message_id, message_author_id, message_author_name, message_content, message_timestamp, message_mentions, count, temp = row
                         time = datetime.strptime(message_timestamp[:-7], '%Y-%m-%d %H:%M:%S') #cutting out the milliseconds
                         plt.plot_date(time, count)
             plt.gcf().autofmt_xdate()
@@ -169,11 +169,11 @@ class ModBot(discord.Client):
 
             # TODO: Kyle, I wrote some psuedocode below to send the graph once it's being generated properly
             with open("./network_data.csv") as f:
-                data = [line.split(',') for line in f]
+                data = [line.split('\t') for line in f]
                 if len(data) > 1:
-                    data_panda = pd.read_csv("./network_data.csv")  
+                    data_panda = pd.read_csv("./network_data.csv", sep='\t',lineterminator='\n')  
                     G = nx.from_pandas_edgelist(data_panda, #Create a directed graph
-                                source = 'message_author',
+                                source = 'message_author_name',
                                 target = 'message_mentions',
                                 edge_attr = True,
                                 create_using = nx.DiGraph()
@@ -213,20 +213,27 @@ class ModBot(discord.Client):
 
         # record message in csv file
         f = open('./time_data.csv', 'a+', newline='')
-        writer = csv.writer(f)
-        # header = message_id,message_author,message_content,message_timestamp,message_mentions,count
-        row = [message.id, message.author.id, message.content, message.created_at, [m.id for m in message.mentions], 1]
-        writer.writerow(row)
+        # writer = csv.writer(f)
+        # row = ["message_id","message_author_id","message_author_name","message_content","message_timestamp","message_mentions","count"]
+        row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str([m.name for m in message.mentions]), "1"]
+        # writer.writerow(row)
+        for el in row:
+            f.write(el + '\t')
+        f.write('\n')        
+        # writer.writerow('\t'.join(row))
         f.close()
 
         # record messages with mentions in csv file
-        with open('./network_data.csv','a+',newline='') as write_obj:
-            csv_writer = csv.writer(write_obj)
-            # header = message_id,message_author,message_content,message_timestamp,message_mentions,count
-            row = [message.id, message.author.id, message.content, message.created_at, [m.id for m in message.mentions], 1]  
-            if row[4] != []:
-                csv_writer.writerow(row)  
-        f.close()
+        write_obj =  open('./network_data.csv','a+',newline='')
+        # csv_writer = csv.writer(write_obj)
+        # header = message_id,message_author_id,message_author_name,message_content,message_timestamp,message_mentions,count
+        row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str([m.name for m in message.mentions]), "1"]
+        if row[5] != []:
+            # csv_writer.writerow(row)  
+            for el in row:
+                write_obj.write(el + '\t')
+            write_obj.write('\n')   
+        write_obj.close()
 
         mod_channel = self.mod_channels[message.guild.id]
         if message.channel == mod_channel and message.content.startswith("User-reported message"):
