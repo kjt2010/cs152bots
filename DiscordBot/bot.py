@@ -5,9 +5,9 @@ import os
 import json
 import logging
 import re
-import requests
+import requests 
 from report import Report
-from uni2ascii import uni2ascii
+#from uni2ascii import uni2ascii
 import time
 import asyncio
 import csv
@@ -15,6 +15,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from matplotlib import pyplot as plt
 from matplotlib import dates as mpl_dates
+import networkx as nx
 
 PERSPECTIVE_SCORE_THRESHOLD = 0.80
 AUTOMATICE_REMOVAL_SCORE_THRESHOLD = 0.95
@@ -85,7 +86,7 @@ class ModBot(discord.Client):
             return
 
         # handle adversarial attempts at hiding text via unicode
-        message.content = uni2ascii(message.content)
+        #message.content = uni2ascii(message.content)
 
         # Create a map of messageId -> message.delete() function to use if moderator reacts to bot
         # self.deleteMap[str(message.id)] = message.delete
@@ -124,25 +125,7 @@ class ModBot(discord.Client):
         # If the report is complete or cancelled, remove it from our map
         if self.reports[author_id].report_complete():
             self.reports.pop(author_id)
-
-    # TODO: Kyle: fix up this code so it correctly generates a network
-    def gen_networkPlot():
-        with open("./time_data.csv") as f:
-            data = [line.split(',') for line in f]
-            #Source: https://towardsdatascience.com/social-network-analysis-from-theory-to-applications-with-python-d12e9a34c2c7
-            plot_dataMelted = data.melt( #melt to edgelist
-                ['message_id','message_content','message_timestamp','count'],
-                var_name = 'message_author', value_name = 'count'
-            )
-            G = nx.from_pandas_edgelist(plot_dataMelted, #Create a directed graph
-                                        source = 'message_author',
-                                        target = 'message_mentions',
-                                        edge_attr = 'count',
-                                        create_using = nx.Digraph()
-            )
-            plt.savefig(fname='networkPlot')
-            nx.draw_networkx(G) #Visualize network
-
+            
     async def on_raw_reaction_add(self, payload):
         guild = client.get_guild(payload.guild_id)
         channel = guild.get_channel(payload.channel_id)
@@ -176,7 +159,17 @@ class ModBot(discord.Client):
             await channel.send(file=discord.File('timePlot.png'))
 
             # TODO: Kyle, I wrote some psuedocode below to send the graph once it's being generated properly
-            gen_networkPlot()
+            data_panda = pd.read_csv("./network_data.csv")  
+            G = nx.from_pandas_edgelist(data_panda, #Create a directed graph
+                        source = 'message_author',
+                        target = 'message_mentions',
+                        edge_attr = True,
+                        create_using = nx.DiGraph()
+            )
+            nx.draw_networkx(G)
+            plt.title("User "+ str(authorToGraph)+"'s network")
+            # save the plot as networkPlot.png which can be accessed via discord.File('networkPlot.png')
+            plt.savefig(fname='networkPlot')
             await channel.send(file=discord.File('networkPlot.png'))
            
         if payload.emoji.name == "❌":
@@ -197,6 +190,14 @@ class ModBot(discord.Client):
         # header = message_id,message_author,message_content,message_timestamp,message_mentions,count
         row = [message.id, message.author.id, message.content, message.created_at, [m.id for m in message.mentions], 1]
         writer.writerow(row)
+        f.close()
+
+        # record messages with mentions in csv file
+        f = open('./network_data.csv','a+', newline='')
+        writer = csv.writer(f)
+        row = [message.id, message.author.id, message.content, message.created_at, [m.id for m in message.mentions], 1]  
+        if row[4] != []:
+            writer.writerow(row)  
         f.close()
 
         mod_channel = self.mod_channels[message.guild.id]
