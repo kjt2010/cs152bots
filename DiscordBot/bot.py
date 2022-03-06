@@ -11,7 +11,6 @@ from uni2ascii import uni2ascii
 import time
 import asyncio
 import csv
-from csv import writer
 import pandas as pd
 from datetime import datetime, timedelta
 from matplotlib import pyplot as plt
@@ -224,9 +223,9 @@ class ModBot(discord.Client):
         with open('./network_data.csv','a+',newline='') as write_obj:
             csv_writer = csv.writer(write_obj)
             # header = message_id,message_author,message_content,message_timestamp,message_mentions,count
-            row = [message.id, message.author.id, message.content, message.created_at, [m.id for m in message.mentions], 1]
-            if row[4] != []:# and row[5] != 1:
-                csv_writer.writerow(row)
+            row = [message.id, message.author.id, message.content, message.created_at, [m.id for m in message.mentions], 1]  
+            if row[4] != []:
+                csv_writer.writerow(row)  
         f.close()
 
         mod_channel = self.mod_channels[message.guild.id]
