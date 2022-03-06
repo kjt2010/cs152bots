@@ -203,7 +203,7 @@ class ModBot(discord.Client):
         # record message in csv file
         f = open('./time_data.csv', 'a+', newline='')
         writer = csv.writer(f)
-        # header = message_id,message_author,message_content,message_timestamp,message_mentions,count
+        header = message_id,message_author,message_content,message_timestamp,message_mentions,count
         row = [message.id, message.author.id, message.content, message.created_at, [m.id for m in message.mentions], 1]
         writer.writerow(row)
         f.close()
