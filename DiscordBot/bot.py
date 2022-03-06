@@ -7,7 +7,7 @@ import logging
 import re
 import requests 
 from report import Report
-#from uni2ascii import uni2ascii
+from uni2ascii import uni2ascii
 import time
 import asyncio
 import csv
@@ -16,8 +16,11 @@ from datetime import datetime, timedelta
 from matplotlib import pyplot as plt
 from matplotlib import dates as mpl_dates
 import networkx as nx
+# from googletrans import Translator
 
-PERSPECTIVE_SCORE_THRESHOLD = 0.80
+# pip3 install googletrans==4.0.0-rc1
+
+PERSPECTIVE_SCORE_THRESHOLD = 0.70
 AUTOMATICE_REMOVAL_SCORE_THRESHOLD = 0.95
 
 # Set up logging to the console
@@ -73,6 +76,9 @@ class ModBot(discord.Client):
         message = await channel.fetch_message(payload.message_id)
         # handle adversarial attempts at hiding text via unicode
         message.content = uni2ascii(message.content)
+        # translate all messages in other languages to english
+        # translator = Translator()
+        # message.content = translator.translate(message.content)
         # treat all edited messages as new messages
         await self.on_message(message)
 
@@ -86,7 +92,10 @@ class ModBot(discord.Client):
             return
 
         # handle adversarial attempts at hiding text via unicode
-        #message.content = uni2ascii(message.content)
+        message.content = uni2ascii(message.content)
+        # translate all messages in other languages to english
+        # translator = Translator()
+        # message.content = translator.translate(message.content)
 
         # Create a map of messageId -> message.delete() function to use if moderator reacts to bot
         # self.deleteMap[str(message.id)] = message.delete
@@ -139,8 +148,7 @@ class ModBot(discord.Client):
             await self.deleteMap[str(messageToDeleteId)]("🗑️")
         if payload.emoji.name == "✅":
             authorToGraph = message.content[message.content.rfind('(')+1:message.content.rfind(')')]
-            print("graphing author:", authorToGraph)
-
+            user = await client.fetch_user(int(authorToGraph))
             #graphing time series data:
             # header = message_id,message_author,message_content,message_timestamp,message_mentions,count
             with open("./time_data.csv") as f:
@@ -153,41 +161,44 @@ class ModBot(discord.Client):
             plt.gcf().autofmt_xdate()
             date_format = mpl_dates.DateFormatter('%D %H:%M:%S')
             plt.gca().xaxis.set_major_formatter(date_format)
-            plt.title("User "+ str(authorToGraph)+"'s messages over time")
+            plt.title("User "+ str(user)+"'s messages over time")
             # save the plot as timePlot.png which can be accessed via discord.File('timePlot.png')
             plt.savefig(fname='timePlot')
             await channel.send(file=discord.File('timePlot.png'))
+            plt.clf() 
 
             # TODO: Kyle, I wrote some psuedocode below to send the graph once it's being generated properly
-            data_panda = pd.read_csv("./network_data.csv")  
-            G = nx.from_pandas_edgelist(data_panda, #Create a directed graph
-                        source = 'message_author',
-                        target = 'message_mentions',
-                        edge_attr = True,
-                        create_using = nx.DiGraph()
-            )
-            print(data_panda)
-            plt.figure(1) #Label figure
-            color_map = []
-            size_map = []
-            for i in G.nodes:
-                G.nodes[i]['weight'] = 100
-                G.nodes[i]['source'] = message.author.id
-                size_map.append(G.nodes[i]['weight']*2)
-                if G.nodes[i]['source']:
-                    color_map.append('red')
-                else:
-                    color_map.append('green')
-            nx.draw_networkx(G,
-                node_color = color_map,  
-                node_size = size_map, 
-                pos = nx.spring_layout(G, iterations = 1000),
-                arrows = False, with_labels = True)
-            plt.title("User "+ str(authorToGraph)+"'s network")
-            # save the plot as networkPlot.png which can be accessed via discord.File('networkPlot.png')
-            plt.savefig(fname='networkPlot')
-            await channel.send(file=discord.File('networkPlot.png'))
-           
+            with open("./network_data.csv") as f:
+                data = [line.split(',') for line in f]
+                if len(data) > 1:
+                    data_panda = pd.read_csv("./network_data.csv")  
+                    G = nx.from_pandas_edgelist(data_panda, #Create a directed graph
+                                source = 'message_author',
+                                target = 'message_mentions',
+                                edge_attr = True,
+                                create_using = nx.DiGraph()
+                    )
+                    plt.figure(1) #Label figure
+                    color_map = []
+                    size_map = []
+                    for i in G.nodes:
+                        G.nodes[i]['weight'] = 100
+                        G.nodes[i]['source'] = message.author.id
+                        size_map.append(G.nodes[i]['weight']*2)
+                        if G.nodes[i]['source']:
+                            color_map.append('red')
+                        else:
+                            color_map.append('green')
+                    nx.draw_networkx(G,
+                        node_color = color_map,  
+                        node_size = size_map, 
+                        pos = nx.spring_layout(G, iterations = 1000),
+                        arrows = False, with_labels = True)
+                    plt.title("User "+ str(user)+"'s network")
+                    # save the plot as networkPlot.png which can be accessed via discord.File('networkPlot.png')
+                    plt.savefig(fname='networkPlot')
+                    await channel.send(file=discord.File('networkPlot.png'))
+
         if payload.emoji.name == "❌":
             userToSuspend = message.content[message.content.rfind(':')+1:]
             channel = self.mod_channels[payload.guild_id]
@@ -210,7 +221,7 @@ class ModBot(discord.Client):
 
         # record messages with mentions in csv file
         with open('./network_data.csv','a+',newline='') as write_obj:
-            csv_writer = csv.writer(write_obj)  
+            csv_writer = csv.writer(write_obj)
             # header = message_id,message_author,message_content,message_timestamp,message_mentions,count
             row = [message.id, message.author.id, message.content, message.created_at, [m.id for m in message.mentions], 1]  
             if row[4] != []:
