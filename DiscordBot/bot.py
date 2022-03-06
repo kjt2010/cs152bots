@@ -11,6 +11,7 @@ from report import Report
 import time
 import asyncio
 import csv
+from csv import writer
 import pandas as pd
 from datetime import datetime, timedelta
 from matplotlib import pyplot as plt
@@ -166,7 +167,22 @@ class ModBot(discord.Client):
                         edge_attr = True,
                         create_using = nx.DiGraph()
             )
-            nx.draw_networkx(G)
+            print(data_panda)
+            plt.figure(1) #Label figure
+            color_map = []
+            size_map = []
+            for i in G.nodes:
+                G.nodes[i]['weight'] = 100
+                size_map.append(G.nodes[i]['weight']*2)
+                if G.nodes[i]['source']:
+                    color_map.append('red')
+                else:
+                    color_map.append('green')
+            nx.draw_networkx(G,
+                node_color = color_map,  
+                node_size = size_map, 
+                pos = nex.spring_layout(G, iterations = 1000),
+                arrows = False, with_labels = True)
             plt.title("User "+ str(authorToGraph)+"'s network")
             # save the plot as networkPlot.png which can be accessed via discord.File('networkPlot.png')
             plt.savefig(fname='networkPlot')
@@ -193,11 +209,12 @@ class ModBot(discord.Client):
         f.close()
 
         # record messages with mentions in csv file
-        f = open('./network_data.csv','a+', newline='')
-        writer = csv.writer(f)
-        row = [message.id, message.author.id, message.content, message.created_at, [m.id for m in message.mentions], 1]  
-        if row[4] != []:
-            writer.writerow(row)  
+        with open('./network_data.csv','a+',newline='') as write_obj:
+            csv_writer = csv.writer(write_obj)  
+            # header = message_id,message_author,message_content,message_timestamp,message_mentions,count
+            row = [message.id, message.author.id, message.content, message.created_at, [m.id for m in message.mentions], 1]  
+            if row[4] != [] and row[5] != 1:
+                csv_writer.writerow(row)  
         f.close()
 
         mod_channel = self.mod_channels[message.guild.id]
