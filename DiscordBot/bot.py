@@ -227,7 +227,7 @@ class ModBot(discord.Client):
         # csv_writer = csv.writer(write_obj)
         # header = message_id,message_author_id,message_author_name,message_content,message_timestamp,message_mentions,count
         row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str([m.name for m in message.mentions]), "1"]
-        if row[5] != []:
+        if row[5] != "[]":
             # csv_writer.writerow(row)  
             for el in row:
                 write_obj.write(el + '\t')
