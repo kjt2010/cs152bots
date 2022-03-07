@@ -183,27 +183,41 @@ class ModBot(discord.Client):
                                 target = 'message_mentions',
                                 edge_attr = True,
                                 create_using = nx.DiGraph()
-                    )
-                    plt.figure(1) #Label figure
+                    ) 
+                    
+                    print(G.nodes) #inspect nodes
+                    print(G.edges) #inspect edges
+                    print(G.out_degree) #inspect outgoing message count to others
+                    print(G.in_degree) #inspect incoming message count from others
+        
                     color_map = []
                     size_map = []
                     for i in G.nodes:
-                        G.nodes[i]['weight'] = 100
-                        G.nodes[i]['source'] = message.author.id
-                        size_map.append(G.nodes[i]['weight']*2)
-                        if G.nodes[i]['source']:
+                        if G.nodes[i] == {}: #from_pandas_edgelist apparently provides no node attributes for 'G'...this is problematic when trying to differentiate between source/target for the purpose of coloring them differently...I could not find a solution to this.   
                             color_map.append('red')
                         else:
-                            color_map.append('green')
+                            color_map.append('green')    
+                        size_map.append(500) 
+
                     nx.draw_networkx(G,
                         node_color = color_map,  
-                        node_size = size_map, 
+                        node_size = size_map,
+                        node_shape = "8",#can choose s,o,^,>,v,<,d,p,h,8...o is default
+                        alpha = 0.75,     
+                        font_size = 10,    
+                        font_color = "black",
+                        font_weight = "bold",
+                        edge_color = "skyblue",
+                        style = "solid",
+                        width = 5,   
+                        label = "User Mentions",
                         pos = nx.spring_layout(G, iterations = 1000),
-                        arrows = False, with_labels = True)
+                        arrows = True, with_labels = True)
                     plt.title("User "+ str(user)+"'s network")
                     # save the plot as networkPlot.png which can be accessed via discord.File('networkPlot.png')
                     plt.savefig(fname='networkPlot')
                     await channel.send(file=discord.File('networkPlot.png'))
+                    plt.clf()
 
         if payload.emoji.name == "❌":
             userToSuspend = message.content[message.content.rfind(':')+1:]
@@ -233,7 +247,7 @@ class ModBot(discord.Client):
         write_obj =  open('./network_data.csv','a+',newline='')
         # csv_writer = csv.writer(write_obj)
         # header = message_id,message_author_id,message_author_name,message_content,message_timestamp,message_mentions,count
-        row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str([m.name for m in message.mentions]), "1"]
+        row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str([m.name for m in message.mentions]), "1"]#tried to use r.find("'")... on m.name to clean user mention display, but no luck
         if row[5] != "[]":
             # csv_writer.writerow(row)  
             for el in row:
