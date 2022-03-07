@@ -10,7 +10,12 @@ from report import Report
 from uni2ascii import uni2ascii
 
 PERSPECTIVE_SCORE_THRESHOLD = 0.80
-AUTOMATICE_REMOVAL_SCORE_THRESHOLD = 0.95
+PERSPECTIVE_SCORE_THRESHOLD_BY_ATTR = {
+    'SEVERE_TOXICITY': 0.51, 'PROFANITY': 0.80,
+    'IDENTITY_ATTACK': 0.51, 'THREAT': 0.51,
+    'TOXICITY': 0.70, 'INSULT': 0.70, 'INCOHERENT': 0.99,
+    'SPAM': 0.99,
+}
 
 # Set up logging to the console
 logger = logging.getLogger('discord')
@@ -247,7 +252,7 @@ class ModBot(discord.Client):
             for attr in response_dict["attributeScores"]:
                 score = response_dict["attributeScores"][attr]["summaryScore"]["value"]
                 scores[attr] = score
-                if score >= PERSPECTIVE_SCORE_THRESHOLD:
+                if score >= PERSPECTIVE_SCORE_THRESHOLD_BY_ATTR[attr]:
                     flagged_scores[attr] = score
 
         print("scores for `{}`".format(message.content), scores)
