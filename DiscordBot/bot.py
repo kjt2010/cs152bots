@@ -17,6 +17,7 @@ from matplotlib import pyplot as plt
 from matplotlib import dates as mpl_dates
 import networkx as nx
 # from googletrans import Translator
+from deep_translator import GoogleTranslator
 
 # pip3 install googletrans==4.0.0-rc1
 
@@ -77,8 +78,7 @@ class ModBot(discord.Client):
         # handle adversarial attempts at hiding text via unicode
         message.content = uni2ascii(message.content)
         # translate all messages in other languages to english
-        # translator = Translator()
-        # message.content = translator.translate(message.content)
+        message.content = GoogleTranslator(source='auto', target='en').translate(message.content)
         # treat all edited messages as new messages
         await self.on_message(message)
 
@@ -94,8 +94,7 @@ class ModBot(discord.Client):
         # handle adversarial attempts at hiding text via unicode
         message.content = uni2ascii(message.content)
         # translate all messages in other languages to english
-        # translator = Translator()
-        # message.content = translator.translate(message.content)
+        message.content = GoogleTranslator(source='auto', target='en').translate(message.content)
 
         # Create a map of messageId -> message.delete() function to use if moderator reacts to bot
         # self.deleteMap[str(message.id)] = message.delete
