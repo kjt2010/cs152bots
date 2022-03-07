@@ -7,7 +7,7 @@ import logging
 import re
 import requests 
 from report import Report
-from uni2ascii import uni2ascii
+#from uni2ascii import uni2ascii
 import time
 import asyncio
 import csv
@@ -92,7 +92,7 @@ class ModBot(discord.Client):
             return
 
         # handle adversarial attempts at hiding text via unicode
-        message.content = uni2ascii(message.content)
+        #message.content = uni2ascii(message.content)
         # translate all messages in other languages to english
         message.content = GoogleTranslator(source='auto', target='en').translate(message.content)
 
@@ -171,6 +171,13 @@ class ModBot(discord.Client):
                 data = [line.split('\t') for line in f]
                 if len(data) > 1:
                     data_panda = pd.read_csv("./network_data.csv", sep='\t',lineterminator='\n')  
+                    data_panda.dropna( #drop blank rows
+                            axis = 0, 
+                            how = 'all',
+                            thresh = None,
+                            subset = None,
+                            inplace = True,   
+                    )
                     G = nx.from_pandas_edgelist(data_panda, #Create a directed graph
                                 source = 'message_author_name',
                                 target = 'message_mentions',
@@ -233,6 +240,7 @@ class ModBot(discord.Client):
                 write_obj.write(el + '\t')
             write_obj.write('\n')   
         write_obj.close()
+
 
         mod_channel = self.mod_channels[message.guild.id]
         if message.channel == mod_channel and message.content.startswith("User-reported message"):
