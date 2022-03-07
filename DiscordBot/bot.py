@@ -247,7 +247,7 @@ class ModBot(discord.Client):
         write_obj =  open('./network_data.csv','a+',newline='')
         # csv_writer = csv.writer(write_obj)
         # header = message_id,message_author_id,message_author_name,message_content,message_timestamp,message_mentions,count
-        row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str([m.name for m in message.mentions]), "1"]#tried to use r.find("'")... on m.name to clean user mention display, but no luck
+        row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str([m.name for m in message.mentions])[2:-2], "1"]
         if row[5] != "[]":
             # csv_writer.writerow(row)  
             for el in row:
