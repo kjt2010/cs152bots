@@ -19,7 +19,6 @@ import networkx as nx
 # from googletrans import Translator
 from deep_translator import GoogleTranslator
 import dataframe_image as dfi
-from pytz import timezone
 
 # pip3 install googletrans==4.0.0-rc1
 
@@ -80,7 +79,6 @@ class ModBot(discord.Client):
                 if channel.name == f'group-{self.group_num}':
                     self.general_channel = channel
 
-
     async def on_raw_message_edit(self, payload):
         guild = client.get_guild(payload.guild_id)
         channel = guild.get_channel(payload.channel_id)
@@ -100,6 +98,13 @@ class ModBot(discord.Client):
         # Ignore messages from the bot unless it's a forwarded message
         if message.author.id == self.user.id and not message.content.startswith("User-reported message"):
             return
+
+
+        # handle adversarial attempts at hiding text via unicode
+        message.content = uni2ascii(message.content)
+        # translate all messages in other languages to english
+        message.content = GoogleTranslator(source='auto', target='en').translate(message.content)
+
 
         # Create a map of messageId -> message.delete() function to use if moderator reacts to bot
         # self.deleteMap[str(message.id)] = message.delete
@@ -148,6 +153,7 @@ class ModBot(discord.Client):
             return
         id_start_i = message.content.rfind(":") + 1
         ID_LEN = 18
+        
         author_id = message.content[id_start_i: id_start_i + ID_LEN]
         flagged_message_id = message.content[id_start_i + ID_LEN: id_start_i + 2 * ID_LEN]
         if payload.emoji.name == "👍":
@@ -157,20 +163,18 @@ class ModBot(discord.Client):
         if payload.emoji.name == "✅":
             authorToGraph = author_id
             messageId = flagged_message_id
+
             flagged_message = await self.general_channel.fetch_message(messageId)
             user = await client.fetch_user(int(authorToGraph))
             #graphing time series data:
             # header = message_id,message_author_id, message_author_name,message_content,message_timestamp,message_mentions,count
-            times = []
             with open("./time_data.csv") as f:
                 data = [line.split('\t') for line in f]
                 for row in data:
-                    if len(row)==8 and str(row[1]) == str(authorToGraph):
+                    if len(row)>1 and str(row[1]) == str(authorToGraph):
                         message_id, message_author_id, message_author_name, message_content, message_timestamp, message_mentions, count, temp = row
-                        time = datetime.strptime(message_timestamp[:message_timestamp.rfind('.')], '%Y-%m-%d %H:%M:%S') #cutting out the milliseconds
-                        # plt.plot_date(time, count)
-                        times.append(time)
-            plt.hist(times)
+                        time = datetime.strptime(message_timestamp[:-7], '%Y-%m-%d %H:%M:%S') #cutting out the milliseconds
+                        plt.plot_date(time, count)
             plt.gcf().autofmt_xdate()
             date_format = mpl_dates.DateFormatter('%D %H:%M:%S')
             plt.gca().xaxis.set_major_formatter(date_format)
@@ -203,7 +207,9 @@ class ModBot(discord.Client):
                     color_map = []
                     size_map = []
                     for node in G:
-                        if node == user.name: #from_pandas_edgelist apparently provides no node attributes for 'G'...this is problematic when trying to differentiate between source/target for the purpose of coloring them differently...I could not find a solution to this.
+                      
+                        if node == user.name:
+
                             color_map.append('red')
                         else:
                             color_map.append('green')
@@ -229,19 +235,40 @@ class ModBot(discord.Client):
                     await channel.send(file=discord.File('networkPlot.png'))
                     plt.clf()
 
-                    time_data = pd.read_csv("time_data.csv",sep='\t',lineterminator='\n') # read the data
-                    freq_tab = pd.crosstab(index=time_data["message_content"], columns="count")
-                    dfi.export(freq_tab,"table.png")
+                    #Generate frequency table
+                    f = open("./time_data.csv")
+                    csv_f = csv.reader(f)
+
+                    message_of_interest = {}
+                    author_count = {}
+
+                    with open("./time_data.csv") as f:
+                        data = [line.split('\t') for line in f]
+                        for row in data:
+                            if len(row)>1 and str(row[3]) == str(flagged_message.content):
+                                message_id, message_author_id, message_author_name, message_content, message_timestamp, message_mentions, count, temp = row
+                                if message_author_name not in author_count:
+                                    author_count[message_author_name] = 1
+                                else:
+                                    author_count[message_author_name] += 1 
+                                message_of_interest[flagged_message.content] = author_count
+                        print("Check dictionary: ", message_of_interest)        
+                        freq_data = pd.DataFrame(message_of_interest)
+                        dfi.export(freq_data,"table.png")
                     await channel.send(file=discord.File('table.png'))
 
         if payload.emoji.name == "❌":
+
             userToSuspend = author_id
             user = await client.fetch_user(int(userToSuspend))
+
             channel = self.mod_channels[payload.guild_id]
             await channel.send(f"User {user.name} has been suspended.")
         if payload.emoji.name == "🗑️":
+
             userToSuspend = author_id
             user = await client.fetch_user(int(userToSuspend))
+
             channel = self.mod_channels[payload.guild_id]
             await channel.send(f"User {user.name} has been deleted.")
 
@@ -254,9 +281,7 @@ class ModBot(discord.Client):
         f = open('./time_data.csv', 'a+', newline='')
         # writer = csv.writer(f)
         # row = ["message_id","message_author_id","message_author_name","message_content","message_timestamp","message_mentions","count"]
-
-        timeZonedTime = message.created_at.replace(tzinfo=timezone('UTC')).astimezone(timezone('US/Pacific'))
-        row = [str(message.id), str(message.author.id), message.author.name, message.content, str(timeZonedTime), str([m.name for m in message.mentions]), "1"]
+        row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str([m.name for m in message.mentions]), "1"]
         # writer.writerow(row)
         for el in row:
             f.write(el + '\t')
@@ -269,7 +294,7 @@ class ModBot(discord.Client):
         # csv_writer = csv.writer(write_obj)
         # header = message_id,message_author_id,message_author_name,message_content,message_timestamp,message_mentions,count
         for m in message.mentions:
-            row = [str(message.id), str(message.author.id), message.author.name, message.content, str(timeZonedTime), str(m.name), "1"]#tried to use r.find("'")... on m.name to clean user mention display, but no luck
+            row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str(m.name), "1"]#tried to use r.find("'")... on m.name to clean user mention display, but no luck
             if row[5] != "":
                 # csv_writer.writerow(row)
                 for el in row:
@@ -346,6 +371,7 @@ class ModBot(discord.Client):
         scores, flagged_scores = self.eval_text(message)
         # await mod_channel.send(self.code_format("Scores in all measured categories: " + json.dumps(scores, indent=2)))
         if len(flagged_scores) > 0:
+
             await mod_channel.send(
                 f'**Flagged message**:\n{message.author.name}: "{message.content}"' + "\n" +
                 f'**Flagged categories**:' + self.code_format(json.dumps(flagged_scores, indent=2)) + "\n" +
@@ -353,6 +379,7 @@ class ModBot(discord.Client):
                 self.bold_format("To suspend the user who sent the message") + ", react to this with ❌ \n" +
                 self.bold_format("To see an analysis of the message and the author's messaging history") + ", react to this with ✅ \n" + self.hidden_format("id:"+ str(message.author.id) + str(message.id))
             )
+
     def eval_text(self, message):
         '''
         Given a message, forwards the message to Perspective and returns a dictionary of scores.
