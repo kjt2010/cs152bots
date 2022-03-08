@@ -234,19 +234,19 @@ class ModBot(discord.Client):
 
                     message_of_interest = {}
                     author_count = {}
-                    counter = 1
 
                     with open("./time_data.csv") as f:
                         data = [line.split('\t') for line in f]
                         for row in data:
                             if len(row)>1 and str(row[3]) == str(flagged_message.content):
                                 message_id, message_author_id, message_author_name, message_content, message_timestamp, message_mentions, count, temp = row
-                                if "message_author" not in author_count:
-                                    author_count['message_author'] = counter
+                                if message_author_name not in author_count:
+                                    author_count[message_author_name] = 1
                                 else:
-                                    author_count['message_author'] = counter + 1
-                                message_of_interest[message.content] = author_count
-                        freq_data = pd.DataFrame(message_of_interest, columns = ["message_content", "message_author", "message_count"])
+                                    author_count[message_author_name] += 1 
+                                message_of_interest[flagged_message.content] = author_count
+                        print("Check dictionary: ", message_of_interest)        
+                        freq_data = pd.DataFrame(message_of_interest)
                         dfi.export(freq_data,"table.png")
                     await channel.send(file=discord.File('table.png'))
 
