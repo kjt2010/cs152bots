@@ -194,7 +194,7 @@ class ModBot(discord.Client):
                     color_map = []
                     size_map = []
                     for node in G:
-                        if node in data_panda["message_author_name"].values: #from_pandas_edgelist apparently provides no node attributes for 'G'...this is problematic when trying to differentiate between source/target for the purpose of coloring them differently...I could not find a solution to this.   
+                        if node == user.name: #from_pandas_edgelist apparently provides no node attributes for 'G'...this is problematic when trying to differentiate between source/target for the purpose of coloring them differently...I could not find a solution to this.   
                             color_map.append('red')
                         else:
                             color_map.append('green')
