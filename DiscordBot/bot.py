@@ -19,7 +19,6 @@ import networkx as nx
 # from googletrans import Translator
 from deep_translator import GoogleTranslator
 import dataframe_image as dfi
-from pytz import timezone
 
 # pip3 install googletrans==4.0.0-rc1
 
@@ -156,16 +155,13 @@ class ModBot(discord.Client):
             user = await client.fetch_user(int(authorToGraph))
             #graphing time series data:
             # header = message_id,message_author_id, message_author_name,message_content,message_timestamp,message_mentions,count
-            times = []
             with open("./time_data.csv") as f:
                 data = [line.split('\t') for line in f]
                 for row in data:
-                    if len(row)==8 and str(row[1]) == str(authorToGraph):
+                    if len(row)>1 and str(row[1]) == str(authorToGraph):
                         message_id, message_author_id, message_author_name, message_content, message_timestamp, message_mentions, count, temp = row
-                        time = datetime.strptime(message_timestamp[:message_timestamp.rfind('.')], '%Y-%m-%d %H:%M:%S') #cutting out the milliseconds
-                        # plt.plot_date(time, count)
-                        times.append(time)
-            plt.hist(times)
+                        time = datetime.strptime(message_timestamp[:-7], '%Y-%m-%d %H:%M:%S') #cutting out the milliseconds
+                        plt.plot_date(time, count)
             plt.gcf().autofmt_xdate()
             date_format = mpl_dates.DateFormatter('%D %H:%M:%S')
             plt.gca().xaxis.set_major_formatter(date_format)
@@ -198,7 +194,7 @@ class ModBot(discord.Client):
                     color_map = []
                     size_map = []
                     for node in G:
-                        if node == user.name: #from_pandas_edgelist apparently provides no node attributes for 'G'...this is problematic when trying to differentiate between source/target for the purpose of coloring them differently...I could not find a solution to this.   
+                        if node == user.name: 
                             color_map.append('red')
                         else:
                             color_map.append('green')
@@ -223,10 +219,29 @@ class ModBot(discord.Client):
                     plt.savefig(fname='networkPlot')
                     await channel.send(file=discord.File('networkPlot.png'))
                     plt.clf()
+                    
+                    #Generate frequency table
+                    f = open("./time_data.csv")
+                    csv_f = csv.reader(f)  
+    
+                    message_of_interest = {}
+                    author_count = {}
+                    counter = 1
 
+                    with open("./time_data.csv") as f:
+                        data = [line.split('\t') for line in f]
+                        for row in data:
+                            if len(row)>1 and str(row[3]) == str(message.contents):
+                                message_id, message_author_id, message_author_name, message_content, message_timestamp, message_mentions, count, temp = row
+                                if "message_author" not in author_count:
+                                    author_count['message_author'] = counter
+                                else:
+                                    author_count['message_author'] = counter + 1
+                                message_of_interest[message.contents] = author_count  
+                        freq_data = pd.DataFrame(message_of_interest, columns = ["message_content", "message_author", "message_count"])
+                        dfi.export(freq_data,"table.png")
                     time_data = pd.read_csv("time_data.csv",sep='\t',lineterminator='\n') # read the data
-                    freq_tab = pd.crosstab(index=time_data["message_content"], columns="count")
-                    dfi.export(freq_tab,"table.png")
+                    freq_tab = pd.crosstab(index=time_data["message_content"], columns=["message_author","count"])
                     await channel.send(file=discord.File('table.png'))
 
         if payload.emoji.name == "❌":
@@ -245,9 +260,7 @@ class ModBot(discord.Client):
         f = open('./time_data.csv', 'a+', newline='')
         # writer = csv.writer(f)
         # row = ["message_id","message_author_id","message_author_name","message_content","message_timestamp","message_mentions","count"]
-
-        timeZonedTime = message.created_at.replace(tzinfo=timezone('UTC')).astimezone(timezone('US/Pacific'))
-        row = [str(message.id), str(message.author.id), message.author.name, message.content, str(timeZonedTime), str([m.name for m in message.mentions]), "1"]
+        row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str([m.name for m in message.mentions]), "1"]
         # writer.writerow(row)
         for el in row:
             f.write(el + '\t')
@@ -260,7 +273,7 @@ class ModBot(discord.Client):
         # csv_writer = csv.writer(write_obj)
         # header = message_id,message_author_id,message_author_name,message_content,message_timestamp,message_mentions,count
         for m in message.mentions:
-            row = [str(message.id), str(message.author.id), message.author.name, message.content, str(timeZonedTime), str(m.name), "1"]#tried to use r.find("'")... on m.name to clean user mention display, but no luck
+            row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str(m.name), "1"]#tried to use r.find("'")... on m.name to clean user mention display, but no luck
             if row[5] != "":
                 # csv_writer.writerow(row)  
                 for el in row:
