@@ -54,6 +54,7 @@ class ModBot(discord.Client):
         super().__init__(command_prefix='.', intents=intents)
         self.group_num = None
         self.mod_channels = {} # Map from guild to the mod channel id for that guild
+        self.general_channel = None
         self.reports = {} # Map from user IDs to the state of their report
         self.perspective_key = key
         self.deleteMap = {}
@@ -76,6 +77,9 @@ class ModBot(discord.Client):
             for channel in guild.text_channels:
                 if channel.name == f'group-{self.group_num}-mod':
                     self.mod_channels[guild.id] = channel
+                if channel.name == f'group-{self.group_num}':
+                    self.general_channel = channel
+
 
     async def on_raw_message_edit(self, payload):
         guild = client.get_guild(payload.guild_id)
@@ -96,11 +100,6 @@ class ModBot(discord.Client):
         # Ignore messages from the bot unless it's a forwarded message
         if message.author.id == self.user.id and not message.content.startswith("User-reported message"):
             return
-
-        # handle adversarial attempts at hiding text via unicode
-        message.content = uni2ascii(message.content)
-        # translate all messages in other languages to english
-        message.content = GoogleTranslator(source='auto', target='en').translate(message.content)
 
         # Create a map of messageId -> message.delete() function to use if moderator reacts to bot
         # self.deleteMap[str(message.id)] = message.delete
@@ -149,15 +148,16 @@ class ModBot(discord.Client):
             return
         id_start_i = message.content.rfind(":") + 1
         ID_LEN = 18
-        id_of_interest = message.content[id_start_i: id_start_i + ID_LEN]
+        author_id = message.content[id_start_i: id_start_i + ID_LEN]
+        flagged_message_id = message.content[id_start_i + ID_LEN: id_start_i + 2 * ID_LEN]
         if payload.emoji.name == "👍":
-            messageToDeleteId = id_of_interest
+            messageToDeleteId = flagged_message_id
             print("Deleting message: ", messageToDeleteId)
             await self.deleteMap[str(messageToDeleteId)]("🗑️")
         if payload.emoji.name == "✅":
-            authorToGraph = id_of_interest
-            messageId = message.content[id_start_i + ID_LEN: id_start_i + 2 * ID_LEN]
-            print(messageId)
+            authorToGraph = author_id
+            messageId = flagged_message_id
+            flagged_message = await self.general_channel.fetch_message(messageId)
             user = await client.fetch_user(int(authorToGraph))
             #graphing time series data:
             # header = message_id,message_author_id, message_author_name,message_content,message_timestamp,message_mentions,count
@@ -235,15 +235,19 @@ class ModBot(discord.Client):
                     await channel.send(file=discord.File('table.png'))
 
         if payload.emoji.name == "❌":
-            userToSuspend = id_of_interest
+            userToSuspend = author_id
+            user = await client.fetch_user(int(userToSuspend))
             channel = self.mod_channels[payload.guild_id]
-            await channel.send(f"User {userToSuspend} has been suspended.")
+            await channel.send(f"User {user.name} has been suspended.")
         if payload.emoji.name == "🗑️":
-            userToSuspend = id_of_interest
+            userToSuspend = author_id
+            user = await client.fetch_user(int(userToSuspend))
             channel = self.mod_channels[payload.guild_id]
-            await channel.send(f"User {userToSuspend} has been deleted.")
+            await channel.send(f"User {user.name} has been deleted.")
 
     async def handle_channel_message(self, message):
+        print("SDLKFJL")
+        print(message.content)
         # Only handle messages sent in the "group-#" channel
 
         # record message in csv file
@@ -276,48 +280,55 @@ class ModBot(discord.Client):
 
         mod_channel = self.mod_channels[message.guild.id]
         if message.channel == mod_channel and message.content.startswith("User-reported message"):
-            user_id_start = message.content.rfind("Reported message sender id: ") + len("Reported message sender id: ")
+            user_id_start = message.content.rfind("Author id: ") + len("Author id: ")
             user_id = message.content[user_id_start: user_id_start + 18]
-            message_id_start = message.content.rfind("Reported message id: ") + len("Reported message id: ")
+            message_id_start = message.content.rfind("Message id: ") + len("Message id: ")
             message_id = message.content[message_id_start: message_id_start + 18]
-            delete_message_string_suffix = f"please react to this message with 👍 to delete the message: {message_id}"
-            suspend_user_string_suffix = f"please react to this message with ❌ to suspend the user's account: {user_id}"
-            remove_user_string_suffix = f"please react to this message with 🗑️ to remove the user's account: {user_id}"
+            delete_message_string_suffix = f"react to this with 👍 to delete the message."
+            suspend_user_string_suffix = f"react to this with ❌ to suspend the user's account."
+            remove_user_string_suffix = f"react to this with 🗑️ to remove the user's account."
+            id_suffix = self.hidden_format(f"id:{user_id}{message_id}")
 
 
-
-            topic = message.content[message.content.rfind("for") + 4:]
-            topic_end = topic.find("\n")
+            topic = message.content[message.content.rfind("for") + 6:]
+            topic_end = topic.find(".")
             topic = topic[:topic_end]
-            print(topic)
-            print(topic.startswith('"false information'))
             if topic.startswith('"violence'):
-                await mod_channel.send(f"If the reported message glorifies violence, " + delete_message_string_suffix)
-                await mod_channel.send("If the reported message threatens violence against an individual or a group of people, " + suspend_user_string_suffix)
+                await mod_channel.send(
+                    f"If the reported message glorifies violence, " + delete_message_string_suffix + '\n' +
+                    "If the reported message threatens violence against an individual or a group of people, " + suspend_user_string_suffix + '\n' +
+                    id_suffix
+                )
 
             elif topic.startswith('"spam: Includes a link'):
-                await mod_channel.send("If the reported message deceptively or misleadingly directs users to a harmful site, " + delete_message_string_suffix)
+                await mod_channel.send("If the reported message deceptively or misleadingly directs users to a harmful site, " + delete_message_string_suffix + '\n' + id_suffix)
             elif topic.startswith('"spam: The user is fake'):
-                await mod_channel.send("If the reported message's sender impersonates individuals or groups and intends to deceive others, " + remove_user_string_suffix)
+                await mod_channel.send("If the reported message's sender impersonates individuals or groups and intends to deceive others, " + remove_user_string_suffix + '\n' + id_suffix)
 
             elif topic.startswith('"hate'):
-                await mod_channel.send("If the reported message promotes violence against, threatens, harasses, or promotes terrorism or violent extremism other people on the basis of race, ethnicity, sexual orientation, gender, religion, national origin, disability, or disease, " + suspend_user_string_suffix)
+                await mod_channel.send("If the reported message promotes violence against, threatens, harasses, or promotes terrorism or violent extremism other people on the basis of race, ethnicity, sexual orientation, gender, religion, national origin, disability, or disease, " + suspend_user_string_suffix + '\n' + id_suffix)
 
             elif topic.startswith('"false info about Politics'):
-                await mod_channel.send("If the reported message is manipulating or interfering in elections or other civic processes (This includes posting or sharing content that may suppress participation or mislead people about when, where, or how to participate in a civic process 's sender impersonates individuals or groups and intends to deceive others), " + delete_message_string_suffix)
-                await mod_channel.send("If you suspect that this account is a bot or a sock puppet user, " + remove_user_string_suffix)
+                await mod_channel.send(
+                    "If the reported message is manipulating or interfering in elections or other civic processes (This includes posting or sharing content that may suppress participation or mislead people about when, where, or how to participate in a civic process 's sender impersonates individuals or groups and intends to deceive others), " + delete_message_string_suffix + '\n' +
+                    "If you suspect that this account is a bot or a sock puppet user, " + remove_user_string_suffix + '\n' +
+                    id_suffix
+                )
 
             elif topic.startswith('"false info'):
-                await mod_channel.send("If the reported message is likely to cause harm, "+ delete_message_string_suffix)
-                await mod_channel.send("If you suspect that this account is a bot or a sock puppet user, " + remove_user_string_suffix)
+                await mod_channel.send(
+                    "If the reported message is likely to cause harm, "+ delete_message_string_suffix + '\n' +
+                    "If you suspect that this account is a bot or a sock puppet user, " + remove_user_string_suffix + '\n' +
+                    id_suffix
+                )
             elif topic.startswith('"harrassment'):
                 if topic.startswith('"harrassment: Degrading'):
-                    await mod_channel.send("If the reported message targets a individual or group by with dehumanizing statements, calls for segregation or exclusion, or statements of inferiority, " + suspend_user_string_suffix)
+                    await mod_channel.send("If the reported message targets a individual or group by with dehumanizing statements, calls for segregation or exclusion, or statements of inferiority, " + suspend_user_string_suffix + '\n' + id_suffix)
                 elif topic.startswith('"harrassment: Repeatedly'):
-                    await mod_channel.send("If there a pattern of actions or previous reports by the reporter, " + suspend_user_string_suffix)
+                    await mod_channel.send("If there a pattern of actions or previous reports by the reporter, " + suspend_user_string_suffix + '\n' + id_suffix)
                 elif topic.startswith('"harrassment: Encourages'):
-                    await mod_channel.send("If the reported message includes the targeted harassment of someone, or incites other people to do so (this includes wishing or hoping that someone experiences physical harm), " + suspend_user_string_suffix)
-                await mod_channel.send("If you suspect that this account is a bot or a sock puppet user, " + remove_user_string_suffix)
+                    await mod_channel.send("If the reported message includes the targeted harassment of someone, or incites other people to do so (this includes wishing or hoping that someone experiences physical harm), " + suspend_user_string_suffix + '\n' +  id_suffix)
+                await mod_channel.send("If you suspect that this account is a bot or a sock puppet user, " + remove_user_string_suffix + '\n' + id_suffix)
 
 
 
@@ -326,19 +337,22 @@ class ModBot(discord.Client):
             return
 
         # Forward the message to the mod channel
-        # await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"')
+
+        # handle adversarial attempts at hiding text via unicode
+        message.content = uni2ascii(message.content)
+        # translate all messages in other languages to english
+        message.content = GoogleTranslator(source='auto', target='en').translate(message.content)
 
         scores, flagged_scores = self.eval_text(message)
         # await mod_channel.send(self.code_format("Scores in all measured categories: " + json.dumps(scores, indent=2)))
         if len(flagged_scores) > 0:
-            await mod_channel.send(f'**Flagged message**:\n{message.author.name}: "{message.content}"')
-            await mod_channel.send(f'**Flagged categories**:' + self.code_format(json.dumps(flagged_scores, indent=2)))
             await mod_channel.send(
-                self.bold_format("To delete the flagged message") + ", react to this with 👍 " + self.hidden_format("id:"+ str(message.id)))
-            await mod_channel.send(
-                self.bold_format("To suspend the user who sent the message") + ", react to this with ❌ " + self.hidden_format("id:" + str(message.author.id)))
-            await mod_channel.send(
-                self.bold_format("To see an analysis of the message and the author's messaging history") + ", react to this with ✅ " + self.hidden_format("id:"+ str(message.author.id) + str(message.id)))
+                f'**Flagged message**:\n{message.author.name}: "{message.content}"' + "\n" +
+                f'**Flagged categories**:' + self.code_format(json.dumps(flagged_scores, indent=2)) + "\n" +
+                self.bold_format("To delete the flagged message") + ", react to this with 👍 \n" +
+                self.bold_format("To suspend the user who sent the message") + ", react to this with ❌ \n" +
+                self.bold_format("To see an analysis of the message and the author's messaging history") + ", react to this with ✅ \n" + self.hidden_format("id:"+ str(message.author.id) + str(message.id))
+            )
     def eval_text(self, message):
         '''
         Given a message, forwards the message to Perspective and returns a dictionary of scores.

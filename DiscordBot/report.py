@@ -30,14 +30,21 @@ class Report:
     async def generate_message_to_mods(self, reason_message, reason):
         mod_channel = self.client.mod_channels[self.message.guild.id]
         await mod_channel.send(f"""User-reported message:\n```{self.message.author.name}: "{self.message.content}```
-Message was flagged by user {reason_message.author.name} for "{reason}".
-Reported message sender id: {self.message.author.id}
-Reported message id: {self.message.id}""")
-
-
+*Author id: {self.message.author.id}*
+*Message id: {self.message.id}*
+Flagged by user {reason_message.author.name} for **"{reason}"**.
+""")
 
 
     async def handle_message(self, message):
+        # result = self._handle_message_helper(message)
+        # print(result)
+        # if len(result > 0):
+        return ["\n".join(await self._handle_message_helper(message))]
+        # else:
+        #     return result
+
+    async def _handle_message_helper(self, message):
         '''
         This function makes up the meat of the user-side reporting flow. It defines how we transition between states and what
         prompts to offer at each of those states. You're welcome to change anything you want; this skeleton is just here to
