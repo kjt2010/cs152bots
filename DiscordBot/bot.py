@@ -5,7 +5,7 @@ import os
 import json
 import logging
 import re
-import requests 
+import requests
 from report import Report
 #from uni2ascii import uni2ascii
 import time
@@ -22,8 +22,12 @@ from deep_translator import GoogleTranslator
 # pip3 install googletrans==4.0.0-rc1
 
 PERSPECTIVE_SCORE_THRESHOLD = 0.70
-AUTOMATICE_REMOVAL_SCORE_THRESHOLD = 0.95
-
+PERSPECTIVE_SCORE_THRESHOLD_BY_ATTR = {
+    'SEVERE_TOXICITY': 0.51, 'PROFANITY': 0.80,
+    'IDENTITY_ATTACK': 0.51, 'THREAT': 0.51,
+    'TOXICITY': 0.70, 'INSULT': 0.70, 'INCOHERENT': 0.99,
+    'SPAM': 0.99,
+}
 # Set up logging to the console
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
@@ -133,7 +137,7 @@ class ModBot(discord.Client):
         # If the report is complete or cancelled, remove it from our map
         if self.reports[author_id].report_complete():
             self.reports.pop(author_id)
-            
+
     async def on_raw_reaction_add(self, payload):
         guild = client.get_guild(payload.guild_id)
         channel = guild.get_channel(payload.channel_id)
@@ -164,52 +168,52 @@ class ModBot(discord.Client):
             # save the plot as timePlot.png which can be accessed via discord.File('timePlot.png')
             plt.savefig(fname='timePlot')
             await channel.send(file=discord.File('timePlot.png'))
-            plt.clf() 
+            plt.clf()
 
             # TODO: Kyle, I wrote some psuedocode below to send the graph once it's being generated properly
             with open("./network_data.csv") as f:
                 data = [line.split('\t') for line in f]
                 if len(data) > 1:
-                    data_panda = pd.read_csv("./network_data.csv", sep='\t',lineterminator='\n')  
+                    data_panda = pd.read_csv("./network_data.csv", sep='\t',lineterminator='\n')
                     data_panda.dropna( #drop blank rows
-                            axis = 0, 
+                            axis = 0,
                             how = 'all',
                             thresh = None,
                             subset = None,
-                            inplace = True,   
+                            inplace = True,
                     )
                     G = nx.from_pandas_edgelist(data_panda, #Create a directed graph
                                 source = 'message_author_name',
                                 target = 'message_mentions',
                                 edge_attr = True,
                                 create_using = nx.DiGraph()
-                    ) 
-                    
+                    )
+
                     print(G.nodes) #inspect nodes
                     print(G.edges) #inspect edges
                     print(G.out_degree) #inspect outgoing message count to others
                     print(G.in_degree) #inspect incoming message count from others
-        
+
                     color_map = []
                     size_map = []
                     for i in G.nodes:
-                        if G.nodes[i] == {}: #from_pandas_edgelist apparently provides no node attributes for 'G'...this is problematic when trying to differentiate between source/target for the purpose of coloring them differently...I could not find a solution to this.   
+                        if G.nodes[i] == {}: #from_pandas_edgelist apparently provides no node attributes for 'G'...this is problematic when trying to differentiate between source/target for the purpose of coloring them differently...I could not find a solution to this.
                             color_map.append('red')
                         else:
-                            color_map.append('green')    
-                        size_map.append(500) 
+                            color_map.append('green')
+                        size_map.append(500)
 
                     nx.draw_networkx(G,
-                        node_color = color_map,  
+                        node_color = color_map,
                         node_size = size_map,
                         node_shape = "8",#can choose s,o,^,>,v,<,d,p,h,8...o is default
-                        alpha = 0.75,     
-                        font_size = 10,    
+                        alpha = 0.75,
+                        font_size = 10,
                         font_color = "black",
                         font_weight = "bold",
                         edge_color = "skyblue",
                         style = "solid",
-                        width = 5,   
+                        width = 5,
                         label = "User Mentions",
                         pos = nx.spring_layout(G, iterations = 1000),
                         arrows = True, with_labels = True)
@@ -239,7 +243,7 @@ class ModBot(discord.Client):
         # writer.writerow(row)
         for el in row:
             f.write(el + '\t')
-        f.write('\n')        
+        f.write('\n')
         # writer.writerow('\t'.join(row))
         f.close()
 
@@ -249,10 +253,10 @@ class ModBot(discord.Client):
         # header = message_id,message_author_id,message_author_name,message_content,message_timestamp,message_mentions,count
         row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str([m.name for m in message.mentions])[2:-2], "1"]
         if row[5] != "[]":
-            # csv_writer.writerow(row)  
+            # csv_writer.writerow(row)
             for el in row:
                 write_obj.write(el + '\t')
-            write_obj.write('\n')   
+            write_obj.write('\n')
         write_obj.close()
 
 
@@ -360,7 +364,7 @@ class ModBot(discord.Client):
             for attr in response_dict["attributeScores"]:
                 score = response_dict["attributeScores"][attr]["summaryScore"]["value"]
                 scores[attr] = score
-                if score >= PERSPECTIVE_SCORE_THRESHOLD:
+                if score >= PERSPECTIVE_SCORE_THRESHOLD_BY_ATTR[attr]:
                     flagged_scores[attr] = score
 
         print("scores for `{}`".format(message.content), scores)
