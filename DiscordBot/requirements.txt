@@ -1,0 +1,5 @@
+discord
+pandas
+deep-translator
+uni2ascii-janin
+dataframe_image

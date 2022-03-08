@@ -27,8 +27,8 @@ PERSPECTIVE_SCORE_THRESHOLD = 0.80
 PERSPECTIVE_SCORE_THRESHOLD_BY_ATTR = {
     'SEVERE_TOXICITY': 0.51, 'PROFANITY': 0.80,
     'IDENTITY_ATTACK': 0.51, 'THREAT': 0.51,
-    'TOXICITY': 0.70, 'INSULT': 0.70, 'INCOHERENT': 0.99,
-    'SPAM': 0.99,
+    'TOXICITY': 0.70, 'INSULT': 0.70, 'INCOHERENT': 0.9,
+    'SPAM': 0.9,
 }
 # Set up logging to the console
 logger = logging.getLogger('discord')
@@ -147,12 +147,17 @@ class ModBot(discord.Client):
         if str(channel) != 'group-14-mod':
             # reaction sent but not in mod channel
             return
+        id_start_i = message.content.rfind(":") + 1
+        ID_LEN = 18
+        id_of_interest = message.content[id_start_i: id_start_i + ID_LEN]
         if payload.emoji.name == "👍":
-            messageToDeleteId = message.content[message.content.rfind(':')+1:]
+            messageToDeleteId = id_of_interest
             print("Deleting message: ", messageToDeleteId)
             await self.deleteMap[str(messageToDeleteId)]("🗑️")
         if payload.emoji.name == "✅":
-            authorToGraph = message.content[message.content.rfind('(')+1:message.content.rfind(')')]
+            authorToGraph = id_of_interest
+            messageId = message.content[id_start_i + ID_LEN: id_start_i + 2 * ID_LEN]
+            print(messageId)
             user = await client.fetch_user(int(authorToGraph))
             #graphing time series data:
             # header = message_id,message_author_id, message_author_name,message_content,message_timestamp,message_mentions,count
@@ -192,13 +197,13 @@ class ModBot(discord.Client):
                                 target = 'message_mentions',
                                 edge_attr = True,
                                 create_using = nx.DiGraph()
-                    ) 
-                    
-        
+                    )
+
+
                     color_map = []
                     size_map = []
                     for node in G:
-                        if node == user.name: #from_pandas_edgelist apparently provides no node attributes for 'G'...this is problematic when trying to differentiate between source/target for the purpose of coloring them differently...I could not find a solution to this.   
+                        if node == user.name: #from_pandas_edgelist apparently provides no node attributes for 'G'...this is problematic when trying to differentiate between source/target for the purpose of coloring them differently...I could not find a solution to this.
                             color_map.append('red')
                         else:
                             color_map.append('green')
@@ -230,11 +235,11 @@ class ModBot(discord.Client):
                     await channel.send(file=discord.File('table.png'))
 
         if payload.emoji.name == "❌":
-            userToSuspend = message.content[message.content.rfind(':')+1:]
+            userToSuspend = id_of_interest
             channel = self.mod_channels[payload.guild_id]
             await channel.send(f"User {userToSuspend} has been suspended.")
         if payload.emoji.name == "🗑️":
-            userToSuspend = message.content[message.content.rfind(':')+1:]
+            userToSuspend = id_of_interest
             channel = self.mod_channels[payload.guild_id]
             await channel.send(f"User {userToSuspend} has been deleted.")
 
@@ -262,10 +267,10 @@ class ModBot(discord.Client):
         for m in message.mentions:
             row = [str(message.id), str(message.author.id), message.author.name, message.content, str(timeZonedTime), str(m.name), "1"]#tried to use r.find("'")... on m.name to clean user mention display, but no luck
             if row[5] != "":
-                # csv_writer.writerow(row)  
+                # csv_writer.writerow(row)
                 for el in row:
                     write_obj.write(el + '\t')
-                write_obj.write('\n')   
+                write_obj.write('\n')
         write_obj.close()
 
 
@@ -326,19 +331,14 @@ class ModBot(discord.Client):
         scores, flagged_scores = self.eval_text(message)
         # await mod_channel.send(self.code_format("Scores in all measured categories: " + json.dumps(scores, indent=2)))
         if len(flagged_scores) > 0:
-            await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"')
+            await mod_channel.send(f'**Flagged message**:\n{message.author.name}: "{message.content}"')
+            await mod_channel.send(f'**Flagged categories**:' + self.code_format(json.dumps(flagged_scores, indent=2)))
             await mod_channel.send(
-                "We've flagged this message for you because it passed the acceptable threshold in these categories: "
-                + self.code_format(json.dumps(flagged_scores, indent=2)))
+                self.bold_format("To delete the flagged message") + ", react to this with 👍 " + self.hidden_format("id:"+ str(message.id)))
             await mod_channel.send(
-                "Please react to this message with 👍 if you'd like us to delete the message '"
-                +message.content+"':"+str(message.id))
+                self.bold_format("To suspend the user who sent the message") + ", react to this with ❌ " + self.hidden_format("id:" + str(message.author.id)))
             await mod_channel.send(
-                "Please react to this message with ❌ if you'd like us to suspend the user who sent the message.'"
-                +message.content+"':"+str(message.author.id))
-            await mod_channel.send(
-                "Do you want to generate a graphical analysis of the author's ("+str(message.author.id)+") messaging? If yes, please react to this message with ✅."
-            )
+                self.bold_format("To see an analysis of the message and the author's messaging history") + ", react to this with ✅ " + self.hidden_format("id:"+ str(message.author.id) + str(message.id)))
     def eval_text(self, message):
         '''
         Given a message, forwards the message to Perspective and returns a dictionary of scores.
@@ -383,6 +383,12 @@ class ModBot(discord.Client):
 
     def code_format(self, text):
         return "```" + text + "```"
+    def hidden_format(self, text):
+        return "||" + text + "||"
+    def bold_format(self, text):
+        return "**" + text + "**"
+    def italic_format(self, text):
+        return "*"+text+"*"
 
 
 client = ModBot(perspective_key)
