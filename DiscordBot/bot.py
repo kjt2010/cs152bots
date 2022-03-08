@@ -7,7 +7,7 @@ import logging
 import re
 import requests
 from report import Report
-#from uni2ascii import uni2ascii
+from uni2ascii import uni2ascii
 import time
 import asyncio
 import csv
@@ -84,7 +84,7 @@ class ModBot(discord.Client):
         channel = guild.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
         # handle adversarial attempts at hiding text via unicode
-        #message.content = uni2ascii(message.content)
+        message.content = uni2ascii(message.content)
         # translate all messages in other languages to english
         message.content = GoogleTranslator(source='auto', target='en').translate(message.content)
         # treat all edited messages as new messages
