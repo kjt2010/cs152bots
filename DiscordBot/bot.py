@@ -260,7 +260,6 @@ class ModBot(discord.Client):
         # csv_writer = csv.writer(write_obj)
         # header = message_id,message_author_id,message_author_name,message_content,message_timestamp,message_mentions,count
         for m in message.mentions:
-            timeZonedTime = message.created_at.astimezone(timezone('US/Pacific'))
             row = [str(message.id), str(message.author.id), message.author.name, message.content, str(timeZonedTime), str(m.name), "1"]#tried to use r.find("'")... on m.name to clean user mention display, but no luck
             if row[5] != "":
                 # csv_writer.writerow(row)  
