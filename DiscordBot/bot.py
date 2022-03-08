@@ -18,6 +18,7 @@ from matplotlib import dates as mpl_dates
 import networkx as nx
 # from googletrans import Translator
 from deep_translator import GoogleTranslator
+import dataframe_image as dfi
 
 # pip3 install googletrans==4.0.0-rc1
 
@@ -185,15 +186,11 @@ class ModBot(discord.Client):
                                 create_using = nx.DiGraph()
                     ) 
                     
-                    print(G.nodes) #inspect nodes
-                    print(G.edges) #inspect edges
-                    print(G.out_degree) #inspect outgoing message count to others
-                    print(G.in_degree) #inspect incoming message count from others
         
                     color_map = []
                     size_map = []
-                    for i in G.nodes:
-                        if G.nodes[i] == {}: #from_pandas_edgelist apparently provides no node attributes for 'G'...this is problematic when trying to differentiate between source/target for the purpose of coloring them differently...I could not find a solution to this.   
+                    for node in G:
+                        if node in data_panda["message_author_name"].values: #from_pandas_edgelist apparently provides no node attributes for 'G'...this is problematic when trying to differentiate between source/target for the purpose of coloring them differently...I could not find a solution to this.   
                             color_map.append('red')
                         else:
                             color_map.append('green')    
@@ -218,6 +215,11 @@ class ModBot(discord.Client):
                     plt.savefig(fname='networkPlot')
                     await channel.send(file=discord.File('networkPlot.png'))
                     plt.clf()
+
+                    time_data = pd.read_csv("time_data.csv",sep='\t',lineterminator='\n') # read the data
+                    freq_tab = pd.crosstab(index=time_data["message_content"], columns="count")
+                    dfi.export(freq_tab,"table.png")
+                    await channel.send(file=discord.File('table.png'))
 
         if payload.emoji.name == "❌":
             userToSuspend = message.content[message.content.rfind(':')+1:]
@@ -247,12 +249,13 @@ class ModBot(discord.Client):
         write_obj =  open('./network_data.csv','a+',newline='')
         # csv_writer = csv.writer(write_obj)
         # header = message_id,message_author_id,message_author_name,message_content,message_timestamp,message_mentions,count
-        row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str([m.name for m in message.mentions]), "1"]#tried to use r.find("'")... on m.name to clean user mention display, but no luck
-        if row[5] != "[]":
-            # csv_writer.writerow(row)  
-            for el in row:
-                write_obj.write(el + '\t')
-            write_obj.write('\n')   
+        for m in message.mentions:
+            row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str(m.name), "1"]#tried to use r.find("'")... on m.name to clean user mention display, but no luck
+            if row[5] != "":
+                # csv_writer.writerow(row)  
+                for el in row:
+                    write_obj.write(el + '\t')
+                write_obj.write('\n')   
         write_obj.close()
 
 
