@@ -19,6 +19,7 @@ import networkx as nx
 # from googletrans import Translator
 from deep_translator import GoogleTranslator
 import dataframe_image as dfi
+from pytz import timezone
 
 # pip3 install googletrans==4.0.0-rc1
 
@@ -155,13 +156,16 @@ class ModBot(discord.Client):
             user = await client.fetch_user(int(authorToGraph))
             #graphing time series data:
             # header = message_id,message_author_id, message_author_name,message_content,message_timestamp,message_mentions,count
+            times = []
             with open("./time_data.csv") as f:
                 data = [line.split('\t') for line in f]
                 for row in data:
-                    if len(row)>1 and str(row[1]) == str(authorToGraph):
+                    if len(row)==8 and str(row[1]) == str(authorToGraph):
                         message_id, message_author_id, message_author_name, message_content, message_timestamp, message_mentions, count, temp = row
-                        time = datetime.strptime(message_timestamp[:-7], '%Y-%m-%d %H:%M:%S') #cutting out the milliseconds
-                        plt.plot_date(time, count)
+                        time = datetime.strptime(message_timestamp[:message_timestamp.rfind('.')], '%Y-%m-%d %H:%M:%S') #cutting out the milliseconds
+                        # plt.plot_date(time, count)
+                        times.append(time)
+            plt.hist(times)
             plt.gcf().autofmt_xdate()
             date_format = mpl_dates.DateFormatter('%D %H:%M:%S')
             plt.gca().xaxis.set_major_formatter(date_format)
@@ -241,7 +245,9 @@ class ModBot(discord.Client):
         f = open('./time_data.csv', 'a+', newline='')
         # writer = csv.writer(f)
         # row = ["message_id","message_author_id","message_author_name","message_content","message_timestamp","message_mentions","count"]
-        row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str([m.name for m in message.mentions]), "1"]
+
+        timeZonedTime = message.created_at.replace(tzinfo=timezone('UTC')).astimezone(timezone('US/Pacific'))
+        row = [str(message.id), str(message.author.id), message.author.name, message.content, str(timeZonedTime), str([m.name for m in message.mentions]), "1"]
         # writer.writerow(row)
         for el in row:
             f.write(el + '\t')
@@ -254,7 +260,8 @@ class ModBot(discord.Client):
         # csv_writer = csv.writer(write_obj)
         # header = message_id,message_author_id,message_author_name,message_content,message_timestamp,message_mentions,count
         for m in message.mentions:
-            row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str(m.name), "1"]#tried to use r.find("'")... on m.name to clean user mention display, but no luck
+            timeZonedTime = message.created_at.astimezone(timezone('US/Pacific'))
+            row = [str(message.id), str(message.author.id), message.author.name, message.content, str(timeZonedTime), str(m.name), "1"]#tried to use r.find("'")... on m.name to clean user mention display, but no luck
             if row[5] != "":
                 # csv_writer.writerow(row)  
                 for el in row:
