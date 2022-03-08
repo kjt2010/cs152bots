@@ -53,6 +53,7 @@ class ModBot(discord.Client):
         super().__init__(command_prefix='.', intents=intents)
         self.group_num = None
         self.mod_channels = {} # Map from guild to the mod channel id for that guild
+        self.general_channel = None
         self.reports = {} # Map from user IDs to the state of their report
         self.perspective_key = key
         self.deleteMap = {}
@@ -75,6 +76,8 @@ class ModBot(discord.Client):
             for channel in guild.text_channels:
                 if channel.name == f'group-{self.group_num}-mod':
                     self.mod_channels[guild.id] = channel
+                if channel.name == f'group-{self.group_num}':
+                    self.general_channel = channel
 
     async def on_raw_message_edit(self, payload):
         guild = client.get_guild(payload.guild_id)
@@ -156,7 +159,7 @@ class ModBot(discord.Client):
         if payload.emoji.name == "✅":
             authorToGraph = id_of_interest
             messageId = message.content[id_start_i + ID_LEN: id_start_i + 2 * ID_LEN]
-            print(messageId)
+            flagged_message = await self.general_channel.fetch_message(messageId)
             user = await client.fetch_user(int(authorToGraph))
             #graphing time series data:
             # header = message_id,message_author_id, message_author_name,message_content,message_timestamp,message_mentions,count
@@ -236,7 +239,7 @@ class ModBot(discord.Client):
                     with open("./time_data.csv") as f:
                         data = [line.split('\t') for line in f]
                         for row in data:
-                            if len(row)>1 and str(row[3]) == str(message.content):
+                            if len(row)>1 and str(row[3]) == str(flagged_message.content):
                                 message_id, message_author_id, message_author_name, message_content, message_timestamp, message_mentions, count, temp = row
                                 if "message_author" not in author_count:
                                     author_count['message_author'] = counter
