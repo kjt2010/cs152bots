@@ -7,7 +7,7 @@ import logging
 import re
 import requests
 from report import Report
-from uni2ascii import uni2ascii
+#from uni2ascii import uni2ascii
 import time
 import asyncio
 import csv
@@ -81,7 +81,7 @@ class ModBot(discord.Client):
         channel = guild.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
         # handle adversarial attempts at hiding text via unicode
-        message.content = uni2ascii(message.content)
+        #message.content = uni2ascii(message.content)
         # translate all messages in other languages to english
         message.content = GoogleTranslator(source='auto', target='en').translate(message.content)
         # treat all edited messages as new messages
@@ -97,7 +97,7 @@ class ModBot(discord.Client):
             return
 
         # handle adversarial attempts at hiding text via unicode
-        message.content = uni2ascii(message.content)
+        #message.content = uni2ascii(message.content)
         # translate all messages in other languages to english
         message.content = GoogleTranslator(source='auto', target='en').translate(message.content)
 
@@ -231,17 +231,15 @@ class ModBot(discord.Client):
                     with open("./time_data.csv") as f:
                         data = [line.split('\t') for line in f]
                         for row in data:
-                            if len(row)>1 and str(row[3]) == str(message.contents):
+                            if len(row)>1 and str(row[3]) == str(message.content):
                                 message_id, message_author_id, message_author_name, message_content, message_timestamp, message_mentions, count, temp = row
                                 if "message_author" not in author_count:
                                     author_count['message_author'] = counter
                                 else:
                                     author_count['message_author'] = counter + 1
-                                message_of_interest[message.contents] = author_count  
+                                message_of_interest[message.content] = author_count
                         freq_data = pd.DataFrame(message_of_interest, columns = ["message_content", "message_author", "message_count"])
                         dfi.export(freq_data,"table.png")
-                    time_data = pd.read_csv("time_data.csv",sep='\t',lineterminator='\n') # read the data
-                    freq_tab = pd.crosstab(index=time_data["message_content"], columns=["message_author","count"])
                     await channel.send(file=discord.File('table.png'))
 
         if payload.emoji.name == "❌":
