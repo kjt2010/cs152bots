@@ -16,11 +16,9 @@ from datetime import datetime, timedelta
 from matplotlib import pyplot as plt
 from matplotlib import dates as mpl_dates
 import networkx as nx
-# from googletrans import Translator
 from deep_translator import GoogleTranslator
 import dataframe_image as dfi
 
-# pip3 install googletrans==4.0.0-rc1
 
 PERSPECTIVE_SCORE_THRESHOLD = 0.80
 PERSPECTIVE_SCORE_THRESHOLD_BY_ATTR = {
@@ -144,6 +142,79 @@ class ModBot(discord.Client):
         if self.reports[author_id].report_complete():
             self.reports.pop(author_id)
 
+    def generate_time_plot(self, authorToGraph, user):
+        with open("./time_data.csv") as f:
+            data = [line.split('\t') for line in f]
+            times = []
+            for row in data:
+                if len(row)>1 and str(row[1]) == str(authorToGraph):
+                    message_id, message_author_id, message_author_name, message_content, message_timestamp, message_mentions, count, temp = row
+                    times.append(datetime.strptime(message_timestamp[:-7], '%Y-%m-%d %H:%M:%S')) #cutting out the milliseconds
+                    # plt.plot_date(time, count)
+        plt.hist(times)
+        plt.gcf().autofmt_xdate()
+        date_format = mpl_dates.DateFormatter('%D %H:%M:%S')
+        plt.gca().xaxis.set_major_formatter(date_format)
+        plt.title("User "+ str(user)+"'s messages over time")
+        plt.savefig(fname='timePlot')
+
+    def generate_network_graph(self, user):
+        data_panda = pd.read_csv("./network_data.csv", sep='\t',lineterminator='\n')
+        data_panda.dropna( #drop blank rows
+                axis = 0,
+                how = 'all',
+                thresh = None,
+                subset = None,
+                inplace = True,
+        )
+        G = nx.from_pandas_edgelist(data_panda, #Create a directed graph
+                    source = 'message_author_name',
+                    target = 'message_mentions',
+                    edge_attr = True,
+                    create_using = nx.DiGraph()
+        )
+        color_map = []
+        size_map = []
+        for node in G:
+            if node == user.name: color_map.append('red')
+            else: color_map.append('green')
+            size_map.append(500)
+        nx.draw_networkx(G,
+            node_color = color_map,
+            node_size = size_map,
+            node_shape = "8",#can choose s,o,^,>,v,<,d,p,h,8...o is default
+            alpha = 0.75,
+            font_size = 10,
+            font_color = "black",
+            font_weight = "bold",
+            edge_color = "skyblue",
+            style = "solid",
+            width = 5,
+            label = "User Mentions",
+            pos = nx.spring_layout(G, iterations = 1000),
+            arrows = True, with_labels = True)
+        plt.title("User "+ str(user)+"'s network")
+        plt.savefig(fname='networkPlot')    
+
+    def generate_freq_table(self, flagged_message):
+        f = open("./time_data.csv")
+        csv_f = csv.reader(f)
+        message_of_interest = {}
+        author_count = {}
+        with open("./time_data.csv") as f:
+            data = [line.split('\t') for line in f]
+            for row in data:
+                if len(row)>1 and str(row[3]) == str(flagged_message.content):
+                    message_id, message_author_id, message_author_name, message_content, message_timestamp, message_mentions, count, temp = row
+                    if message_author_name not in author_count:
+                        author_count[message_author_name] = 1
+                    else:
+                        author_count[message_author_name] += 1 
+                    message_of_interest[flagged_message.content] = author_count
+            print("Check dictionary: ", message_of_interest)        
+            freq_data = pd.DataFrame(message_of_interest)
+            dfi.export(freq_data,"table.png")         
+      
     async def on_raw_reaction_add(self, payload):
         guild = client.get_guild(payload.guild_id)
         channel = guild.get_channel(payload.channel_id)
@@ -153,9 +224,9 @@ class ModBot(discord.Client):
             return
         id_start_i = message.content.rfind(":") + 1
         ID_LEN = 18
-        
         author_id = message.content[id_start_i: id_start_i + ID_LEN]
         flagged_message_id = message.content[id_start_i + ID_LEN: id_start_i + 2 * ID_LEN]
+
         if payload.emoji.name == "👍":
             messageToDeleteId = flagged_message_id
             print("Deleting message: ", messageToDeleteId)
@@ -163,140 +234,47 @@ class ModBot(discord.Client):
         if payload.emoji.name == "✅":
             authorToGraph = author_id
             messageId = flagged_message_id
-
             flagged_message = await self.general_channel.fetch_message(messageId)
             user = await client.fetch_user(int(authorToGraph))
-            #graphing time series data:
-            # header = message_id,message_author_id, message_author_name,message_content,message_timestamp,message_mentions,count
-            with open("./time_data.csv") as f:
-                data = [line.split('\t') for line in f]
-                for row in data:
-                    if len(row)>1 and str(row[1]) == str(authorToGraph):
-                        message_id, message_author_id, message_author_name, message_content, message_timestamp, message_mentions, count, temp = row
-                        time = datetime.strptime(message_timestamp[:-7], '%Y-%m-%d %H:%M:%S') #cutting out the milliseconds
-                        plt.plot_date(time, count)
-            plt.gcf().autofmt_xdate()
-            date_format = mpl_dates.DateFormatter('%D %H:%M:%S')
-            plt.gca().xaxis.set_major_formatter(date_format)
-            plt.title("User "+ str(user)+"'s messages over time")
-            # save the plot as timePlot.png which can be accessed via discord.File('timePlot.png')
-            plt.savefig(fname='timePlot')
+            # graphing time series data
+            self.generate_time_plot(authorToGraph, user)
             await channel.send(file=discord.File('timePlot.png'))
+            plt.clf()  
+            # graphing network data
+            self.generate_network_graph(user)
+            await channel.send(file=discord.File('networkPlot.png'))
             plt.clf()
-
-            # TODO: Kyle, I wrote some psuedocode below to send the graph once it's being generated properly
-            with open("./network_data.csv") as f:
-                data = [line.split('\t') for line in f]
-                if len(data) > 1:
-                    data_panda = pd.read_csv("./network_data.csv", sep='\t',lineterminator='\n')
-                    data_panda.dropna( #drop blank rows
-                            axis = 0,
-                            how = 'all',
-                            thresh = None,
-                            subset = None,
-                            inplace = True,
-                    )
-                    G = nx.from_pandas_edgelist(data_panda, #Create a directed graph
-                                source = 'message_author_name',
-                                target = 'message_mentions',
-                                edge_attr = True,
-                                create_using = nx.DiGraph()
-                    )
-
-
-                    color_map = []
-                    size_map = []
-                    for node in G:
-                      
-                        if node == user.name:
-
-                            color_map.append('red')
-                        else:
-                            color_map.append('green')
-                        size_map.append(500)
-
-                    nx.draw_networkx(G,
-                        node_color = color_map,
-                        node_size = size_map,
-                        node_shape = "8",#can choose s,o,^,>,v,<,d,p,h,8...o is default
-                        alpha = 0.75,
-                        font_size = 10,
-                        font_color = "black",
-                        font_weight = "bold",
-                        edge_color = "skyblue",
-                        style = "solid",
-                        width = 5,
-                        label = "User Mentions",
-                        pos = nx.spring_layout(G, iterations = 1000),
-                        arrows = True, with_labels = True)
-                    plt.title("User "+ str(user)+"'s network")
-                    # save the plot as networkPlot.png which can be accessed via discord.File('networkPlot.png')
-                    plt.savefig(fname='networkPlot')
-                    await channel.send(file=discord.File('networkPlot.png'))
-                    plt.clf()
-
-                    #Generate frequency table
-                    f = open("./time_data.csv")
-                    csv_f = csv.reader(f)
-
-                    message_of_interest = {}
-                    author_count = {}
-
-                    with open("./time_data.csv") as f:
-                        data = [line.split('\t') for line in f]
-                        for row in data:
-                            if len(row)>1 and str(row[3]) == str(flagged_message.content):
-                                message_id, message_author_id, message_author_name, message_content, message_timestamp, message_mentions, count, temp = row
-                                if message_author_name not in author_count:
-                                    author_count[message_author_name] = 1
-                                else:
-                                    author_count[message_author_name] += 1 
-                                message_of_interest[flagged_message.content] = author_count
-                        print("Check dictionary: ", message_of_interest)        
-                        freq_data = pd.DataFrame(message_of_interest)
-                        dfi.export(freq_data,"table.png")
-                    await channel.send(file=discord.File('table.png'))
+            # Generate frequency table
+            self.generate_freq_table(flagged_message)
+            await channel.send(file=discord.File('table.png'))
 
         if payload.emoji.name == "❌":
-
             userToSuspend = author_id
             user = await client.fetch_user(int(userToSuspend))
-
             channel = self.mod_channels[payload.guild_id]
             await channel.send(f"User {user.name} has been suspended.")
         if payload.emoji.name == "🗑️":
-
             userToSuspend = author_id
             user = await client.fetch_user(int(userToSuspend))
-
             channel = self.mod_channels[payload.guild_id]
             await channel.send(f"User {user.name} has been deleted.")
 
     async def handle_channel_message(self, message):
-        print("SDLKFJL")
-        print(message.content)
         # Only handle messages sent in the "group-#" channel
 
         # record message in csv file
         f = open('./time_data.csv', 'a+', newline='')
-        # writer = csv.writer(f)
-        # row = ["message_id","message_author_id","message_author_name","message_content","message_timestamp","message_mentions","count"]
         row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str([m.name for m in message.mentions]), "1"]
-        # writer.writerow(row)
         for el in row:
             f.write(el + '\t')
         f.write('\n')
-        # writer.writerow('\t'.join(row))
         f.close()
 
         # record messages with mentions in csv file
         write_obj =  open('./network_data.csv','a+',newline='')
-        # csv_writer = csv.writer(write_obj)
-        # header = message_id,message_author_id,message_author_name,message_content,message_timestamp,message_mentions,count
         for m in message.mentions:
             row = [str(message.id), str(message.author.id), message.author.name, message.content, str(message.created_at), str(m.name), "1"]#tried to use r.find("'")... on m.name to clean user mention display, but no luck
             if row[5] != "":
-                # csv_writer.writerow(row)
                 for el in row:
                     write_obj.write(el + '\t')
                 write_obj.write('\n')
