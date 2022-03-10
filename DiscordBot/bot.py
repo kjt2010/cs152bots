@@ -214,16 +214,7 @@ class ModBot(discord.Client):
                     message_of_interest[flagged_message.content] = author_count
             print("Check dictionary: ", message_of_interest) 
             freq_data = pd.DataFrame(message_of_interest)
-            fig, ax = plt.subplots(figsize=(12, 3)) 
-            ax.xaxis.set_visible(False)  
-            ax.yaxis.set_visible(False)  
-            ax.set_frame_on(False)  
-            tab = table(ax, freq_data, loc='upper right')  
-            tab.auto_set_font_size(False)
-            tab.set_fontsize(10) 
-            plt.savefig('table.png')        
-            # dfi.export(freq_data,"table.png") 
-            plt.clf()        
+            dfi.export(freq_data,"table.png") 
       
     async def on_raw_reaction_add(self, payload):
         guild = client.get_guild(payload.guild_id)
