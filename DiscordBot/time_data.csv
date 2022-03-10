@@ -4,3 +4,112 @@ message_id	message_author_id	message_author_name	message_content	message_timesta
 950876625346633798	831655628065472542	andrea_dahl	Rebel is who, think carefully. Who made the country a mess? incite the mob	2022-03-08 22:04:13.916000	[]	1	
 950876664810844161	831655628065472542	andrea_dahl	i hate you	2022-03-08 22:04:23.325000	[]	1	
 950876675325976606	831655628065472542	andrea_dahl	kill	2022-03-08 22:04:25.832000	[]	1	
+951182530554527805	821521805730644038	Kevin Tien	hellohello	2022-03-09 18:19:47.401000	[]	1	
+951182564608073758	821521805730644038	Kevin Tien	aslfdjsaldkfj	2022-03-09 18:19:55.520000	[]	1	
+951182599890550795	821521805730644038	Kevin Tien	kill	2022-03-09 18:20:03.932000	[]	1	
+951182754068955196	821521805730644038	Kevin Tien	Cool the bot should be up and running again	2022-03-09 18:20:40.691000	[]	1	
+951183020856066078	821521805730644038	Kevin Tien	hmm actually seems like it's erroring on table generation or something. Didn't see that pop up in the mod channel. <@!754103207201865848> have you seen something like this before?	2022-03-09 18:21:44.298000	['Kyle T']	1	
+951183163890204682	821521805730644038	Kevin Tien	kill again	2022-03-09 18:22:18.400000	[]	1	
+951184183353557062	754103207201865848	Kyle T	Issue with .png?  First time seeing that error message.	2022-03-09 18:26:21.459000	[]	1	
+951184305214853171	754103207201865848	Kyle T	...reviewing code in main now.	2022-03-09 18:26:50.513000	[]	1	
+951185085615468584	754103207201865848	Kyle T	This line was missing from merge.  It needs to be inserted after line 215.	2022-03-09 18:29:56.575000	[]	1	
+951185111620137001	754103207201865848	Kyle T	dfi.export(freq_data,"table.png")	2022-03-09 18:30:02.775000	[]	1	
+951185416470556784	754103207201865848	Kyle T	<@!821521805730644038> do you mind to insert that?  I'm not willing to test my novice push/pulls on github at this final stage!  hah.	2022-03-09 18:31:15.457000	['Kevin Tien']	1	
+951225116308701225	461682376355872778	=Daniel	.join 9	2022-03-09 21:09:00.636000	[]	1	
+951225118154170448	928881155279822888	CS 152 Winter 2022 TA Bot	You have been given the Group 9 role in the CS 152 Discord server.	2022-03-09 21:09:01.076000	[]	1	
+951236238696935524	477304911571451914	irawadee.t	<@!754103207201865848> is there a way to get a higher resolution of the graphs/charts?	2022-03-09 21:53:12.420000	['Kyle T']	1	
+951237241823436851	477304911571451914	irawadee.t	I check the printers here and I can't seem to find a way to print a 42x36 poster	2022-03-09 21:57:11.584000	[]	1	
+951237241823436851	477304911571451914	irawadee.t	I checked the printers here and I can't seem to find a way to print a 42x36 poster	2022-03-09 21:57:11.584000	[]	1	
+951237337025753138	477304911571451914	irawadee.t	Does anyone know where to print posters on campus?	2022-03-09 21:57:34.282000	[]	1	
+951237626147508294	477304911571451914	irawadee.t	Ok I saw that lathrop has a service but the fee is $55	2022-03-09 21:58:43.214000	[]	1	
+951238636152700978	477304911571451914	irawadee.t	Printed out the 3 images! The resolution is not so great so let me know what you guys think.	2022-03-09 22:02:44.018000	[]	1	
+951239505963270156	754103207201865848	Kyle T	<@!477304911571451914> I'll spot you $55 to make transaction.  Will you be able to complete/print it today?  What's your Venmo name/address?	2022-03-09 22:06:11.397000	['irawadee.t']	1	
+951239851452284978	477304911571451914	irawadee.t	Yes I'm going to lathrop right now	2022-03-09 22:07:33.768000	[]	1	
+951240007002234890	477304911571451914	irawadee.t	I have Zelle: 8189131099
+Should be in my name: Irawadee Thawornbut	2022-03-09 22:08:10.854000	[]	1	
+951240173780344863	754103207201865848	Kyle T	Ok. Sending now!	2022-03-09 22:08:50.617000	[]	1	
+951247499371356180	477304911571451914	irawadee.t	Got it, thank you! I sent in the order and it's waiting to be printed right now.	2022-03-09 22:37:57.174000	[]	1	
+951252320300175380	821521805730644038	Kevin Tien	<@!477304911571451914> can you make sure that it'll get printed on time? Isn't the Lathrop printing service the thing that takes 3 days?	2022-03-09 22:57:06.573000	['irawadee.t']	1	
+951253380167258182	821521805730644038	Kevin Tien	kill	2022-03-09 23:01:19.265000	[]	1	
+951253604700917871	821521805730644038	Kevin Tien	Full error trace:
+```Check dictionary:  {'kill': {'andrea_dahl': 2, 'Kevin Tien': 2}}
+error: unknown flag `disable-gpu'
+Ignoring exception in on_raw_reaction_add
+Traceback (most recent call last):
+  File "/afs/.ir/users/k/t/kttien/.local/lib/python3.8/site-packages/discord/client.py", line 343, in _run_event
+    await coro(*args, **kwargs)
+  File "bot.py", line 248, in on_raw_reaction_add
+    self.generate_freq_table(flagged_message)
+  File "bot.py", line 216, in generate_freq_table
+    dfi.export(freq_data,"table.png")
+  File "/afs/.ir/users/k/t/kttien/.local/lib/python3.8/site-packages/dataframe_image/_pandas_accessor.py", line 24, in export
+    return _export(obj, filename, fontsize, max_rows, max_cols, table_conversion, chrome_path)
+  File "/afs/.ir/users/k/t/kttien/.local/lib/python3.8/site-packages/dataframe_image/_pandas_accessor.py", line 73, in _export
+    img_str = converter(html)
+  File "/afs/.ir/users/k/t/kttien/.local/lib/python3.8/site-packages/dataframe_image/_screenshot.py", line 167, in run
+    img = self.take_screenshot()
+  File "/afs/.ir/users/k/t/kttien/.local/lib/python3.8/site-packages/dataframe_image/_screenshot.py", line 119, in take_screenshot
+    img = mimage.imread(buffer)
+  File "/afs/.ir/users/k/t/kttien/.local/lib/python3.8/site-packages/matplotlib/image.py", line 1560, in imread
+    with img_open(fname) as image:
+  File "/usr/lib/python3/dist-packages/PIL/ImageFile.py", line 107, in __init__
+    self._open()
+  File "/usr/lib/python3/dist-packages/PIL/PngImagePlugin.py", line 564, in _open
+    raise SyntaxError("not a PNG file")
+SyntaxError: not a PNG file	2022-03-09 23:02:12.798000	[]	1	
+951253714755264543	477304911571451914	irawadee.t	Yep it's done now!	2022-03-09 23:02:39.037000	['Kevin Tien']	1	
+951253743859544104	477304911571451914	irawadee.t	Picking it up right now.	2022-03-09 23:02:45.976000	[]	1	
+951253752709513266	821521805730644038	Kevin Tien	oh wow lol nice	2022-03-09 23:02:48.086000	[]	1	
+951262699910754324	821521805730644038	Kevin Tien	kick	2022-03-09 23:38:21.265000	[]	1	
+951262710996283463	821521805730644038	Kevin Tien	kill	2022-03-09 23:38:23.908000	[]	1	
+951262716318863381	821521805730644038	Kevin Tien	lmfao	2022-03-09 23:38:25.177000	[]	1	
+951262809814102066	821521805730644038	Kevin Tien	kill	2022-03-09 23:38:47.468000	[]	1	
+951265054559440906	754103207201865848	Kyle T	<@!477304911571451914> I'm about to depart Stanford for the day.  Do you need any help with anything?	2022-03-09 23:47:42.657000	['irawadee.t']	1	
+951265352568942592	754103207201865848	Kyle T	I'll be on campus all afternoon tomorrow.  For those presenting, do you want to meet at the Koret-Taube Conference Center at 4:30?	2022-03-09 23:48:53.708000	[]	1	
+951265739745136660	477304911571451914	irawadee.t	Everything's printed out, so all is done for today! Thank you.	2022-03-09 23:50:26.018000	[]	1	
+951265810180112504	477304911571451914	irawadee.t	Yes, I can meet at that time.	2022-03-09 23:50:42.811000	['Kyle T']	1	
+951275741574742036	831655628065472542	andrea_dahl	kill	2022-03-10 00:30:10.640000	[]	1	
+951275826983366667	831655628065472542	andrea_dahl	I think it's working now <@!754865093811896320>	2022-03-10 00:30:31.003000	['DaveS']	1	
+951279445237448704	930620042498957332	etchak	.join29	2022-03-10 00:44:53.662000	[]	1	
+951280142095876106	930620042498957332	etchak	.join29	2022-03-10 00:47:39.806000	[]	1	
+951281015211556915	754103207201865848	Kyle T	<@!831655628065472542> / <@!821521805730644038> is this on myth right now?  I see the last test was successful.	2022-03-10 00:51:07.973000	['andrea_dahl', 'Kevin Tien']	1	
+951291887027884103	821521805730644038	Kevin Tien	It was successful only when running locally. we're not really sure what the issue is on myth, so I think we should probably just run the code locally for the poster presentation demo	2022-03-10 01:34:20.016000	[]	1	
+951291937099485235	821521805730644038	Kevin Tien	I can put it back up on myth in the meantime for us to collect data for the csv tho	2022-03-10 01:34:31.954000	[]	1	
+951292349265375382	821521805730644038	Kevin Tien	kill	2022-03-10 01:36:10.222000	[]	1	
+951292439870717973	821521805730644038	Kevin Tien	yeahhh still erroring on myth	2022-03-10 01:36:31.824000	[]	1	
+951293217104609340	754103207201865848	Kyle T	Ok.  Strange.  Sounds like a good plan!  I'll start messaging friends to join our group and direct some targeted hate.	2022-03-10 01:39:37.131000	[]	1	
+951296501622136892	887566941076742175	Caroline M	<@!754103207201865848> fuck you	2022-03-10 01:52:40.221000	['Kyle T']	1	
+951296834888945714	887566941076742175	Caroline M	<@!754103207201865848> go kill yourself	2022-03-10 01:53:59.678000	['Kyle T']	1	
+951296918993125496	887566941076742175	Caroline M	Just realizing I should have sent a heads up, sorry everyone. Abuse incoming	2022-03-10 01:54:19.730000	[]	1	
+951297691080609932	754103207201865848	Kyle T	Thanks for helping <@!887566941076742175>!	2022-03-10 01:57:23.810000	['Caroline M']	1	
+951298572425494650	887566941076742175	Caroline M	<@!754103207201865848> all Germans are nazis	2022-03-10 02:00:53.939000	['Kyle T']	1	
+951299263399337994	887566941076742175	Caroline M	<@!754103207201865848> I hope you and all your Buddhist friends get Covid and die	2022-03-10 02:03:38.680000	['Kyle T']	1	
+951299435068006442	754103207201865848	Kyle T	That was spicy.	2022-03-10 02:04:19.609000	['Caroline M']	1	
+951299642623156277	887566941076742175	Caroline M	<@!754103207201865848> I'm in the mood to punch a jew, you with me?	2022-03-10 02:05:09.094000	['Kyle T']	1	
+951299797569122304	887566941076742175	Caroline M	Apologies everyone. That's me and my creativity done.	2022-03-10 02:05:46.036000	[]	1	
+951299965752311868	754103207201865848	Kyle T	Thanks <@!887566941076742175>.  Let us know if you need us to send some hate your way to test your bot!	2022-03-10 02:06:26.134000	['Caroline M']	1	
+951307666725163049	754103207201865848	Kyle T	<@!799769011754893312>  welcome!	2022-03-10 02:37:02.189000	['Sahar - TA (she/her)']	1	
+951307740708487258	799769011754893312	Sahar - TA (she/her)	Some hateful messages incoming, beware!	2022-03-10 02:37:19.828000	[]	1	
+951307813920079932	799769011754893312	Sahar - TA (she/her)	kill <@!754103207201865848>	2022-03-10 02:37:37.283000	['Kyle T']	1	
+951307945797382194	799769011754893312	Sahar - TA (she/her)	I think <@!754103207201865848> should die	2022-03-10 02:38:08.725000	['Kyle T']	1	
+951308031960969256	799769011754893312	Sahar - TA (she/her)	fuck you <@!754103207201865848> you suck	2022-03-10 02:38:29.268000	['Kyle T']	1	
+951308137732907039	799769011754893312	Sahar - TA (she/her)	<@!754103207201865848> burn in hell 🖕	2022-03-10 02:38:54.486000	['Kyle T']	1	
+951308438087012402	754103207201865848	Kyle T	Thanks <@!799769011754893312> !	2022-03-10 02:40:06.096000	['Sahar - TA (she/her)']	1	
+951309901295145050	754103207201865848	Kyle T	kill	2022-03-10 02:45:54.952000	[]	1	
+951316130633506886	754103207201865848	Kyle T	Welcome <@!900044488469270549> to group 14!  Thanks for your help testing our bot!	2022-03-10 03:10:40.142000	['Katie Jonsson']	1	
+951317114621415485	900044488469270549	Katie Jonsson	I am going to kill <@!754103207201865848>	2022-03-10 03:14:34.743000	['Kyle T']	1	
+951317191553347624	900044488469270549	Katie Jonsson	Fuck you <@!754103207201865848> rot in hell	2022-03-10 03:14:53.085000	['Kyle T']	1	
+951317351599571024	900044488469270549	Katie Jonsson	we should all exterminate <@!754103207201865848>	2022-03-10 03:15:31.243000	['Kyle T']	1	
+951317479714603059	900044488469270549	Katie Jonsson	<@!754103207201865848> is a piece of shit	2022-03-10 03:16:01.788000	['Kyle T']	1	
+951329660019539978	933128152870432809	Trinity Price	.leave 7	2022-03-10 04:04:25.799000	[]	1	
+951329661466587166	928881155279822888	CS 152 Winter 2022 TA Bot	The Group 7 role has been removed.	2022-03-10 04:04:26.144000	[]	1	
+951352547510218783	930183109054443620	Soomin	Fuck you <@!754103207201865848>	2022-03-10 05:35:22.602000	['Kyle T']	1	
+951352712069517383	930183109054443620	Soomin	You are a piece of shiit <@!754103207201865848>	2022-03-10 05:36:01.836000	['Kyle T']	1	
+951352757867139172	930183109054443620	Soomin	i want to k*ll you <@!754103207201865848>	2022-03-10 05:36:12.755000	['Kyle T']	1	
+951534754153508885	831655628065472542	andrea_dahl	i can bring my laptop to the presentation today to run the bot	2022-03-10 17:39:24.051000	[]	1	
+951534799623950356	831655628065472542	andrea_dahl	<@!754103207201865848> where did you want to meet up again?	2022-03-10 17:39:34.892000	['Kyle T']	1	
+951537009258815488	754103207201865848	Kyle T	Let's meet-up at the setup location at 4:30: Koret-Taube Conference Center.  Does that work?  Also, I'll bring a few other things in my car in case we need them (i.e. foldout table, extension cord, and external monitor).  Let me know if there is something else that may be needed.	2022-03-10 17:48:21.710000	[]	1	
+951538939162927154	821521805730644038	Kevin Tien	I'm actually probably getting out of work around 5 today so can try to be there for the second half of the session	2022-03-10 17:56:01.835000	[]	1	
+951539025100034078	754103207201865848	Kyle T	Great!!!  🙌	2022-03-10 17:56:22.324000	[]	1	
+951570756268077086	831655628065472542	andrea_dahl	Thanks! can you bring tape in case we need to attach that paper to the poster	2022-03-10 20:02:27.624000	[]	1	
+951571138436268032	754103207201865848	Kyle T	Will do!	2022-03-10 20:03:58.740000	[]	1	
